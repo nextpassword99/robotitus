@@ -1,5 +1,6 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.services.wake_word_detector import WakeWordDetector
+from app.services.silence_detector import SilenceDetector
 from app.services.openai_service import OpenAIService
 from app.core.config import settings
 import logging
@@ -12,39 +13,37 @@ logger = logging.getLogger(__name__)
 @router.websocket("/ws/audio")
 async def audio_stream(websocket: WebSocket):
     await websocket.accept()
-    detector = WakeWordDetector()
+    wake_detector = WakeWordDetector()
+    silence_detector = SilenceDetector()
     openai_service = OpenAIService()
     
-    recording = False
+    listening = False
     audio_buffer = []
-    chunks_received = 0
-    max_chunks = int(settings.recording_duration * settings.sample_rate / 1280)
     
     try:
-        logger.info("Cliente ESP32 conectado")
+        logger.info("Cliente conectado")
         
         while True:
             audio_chunk = await websocket.receive_bytes()
             
-            if not recording:
-                detected, confidence = detector.detect(audio_chunk)
+            if not listening:
+                detected, confidence = wake_detector.detect(audio_chunk)
                 
                 if detected:
-                    logger.info(f"Wake word detectado! Confianza: {confidence:.2f}")
+                    logger.info(f"🎤 Alexa activada! (confianza: {confidence:.2f})")
                     await websocket.send_json({
-                        "status": "wake_word_detected",
-                        "confidence": confidence
+                        "status": "listening",
+                        "message": "Alexa activada, escuchando..."
                     })
-                    recording = True
-                    audio_buffer = []
-                    chunks_received = 0
-                    detector.reset()
+                    listening = True
+                    audio_buffer = [audio_chunk]
+                    silence_detector.reset()
+                    wake_detector.reset()
             else:
                 audio_buffer.append(audio_chunk)
-                chunks_received += 1
                 
-                if chunks_received >= max_chunks:
-                    logger.info("Grabación completa, procesando con GPT...")
+                if silence_detector.check_silence_end(audio_chunk):
+                    logger.info("🔇 Silencio detectado, procesando...")
                     
                     wav_data = _create_wav(audio_buffer)
                     
@@ -54,15 +53,17 @@ async def audio_stream(websocket: WebSocket):
                             "status": "response",
                             "text": response_text
                         })
-                        logger.info(f"Respuesta enviada: {response_text}")
+                        logger.info(f"✅ Respuesta: {response_text}")
                     except Exception as e:
+                        logger.error(f"❌ Error: {e}")
                         await websocket.send_json({
                             "status": "error",
                             "message": str(e)
                         })
                     
-                    recording = False
+                    listening = False
                     audio_buffer = []
+                    silence_detector.reset()
             
     except WebSocketDisconnect:
         logger.info("Cliente desconectado")

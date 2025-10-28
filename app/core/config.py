@@ -8,7 +8,8 @@ class Settings(BaseSettings):
     detection_threshold: float = 0.5
     sample_rate: int = 16000
     openai_api_key: str = ""
-    recording_duration: int = 5
+    silence_threshold: int = 500
+    silence_duration: float = 1.5
     
     class Config:
         env_file = ".env"
