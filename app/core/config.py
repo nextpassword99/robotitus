@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     wake_word_model: str = "alexa"
     detection_threshold: float = 0.5
     sample_rate: int = 16000
+    openai_api_key: str = ""
+    recording_duration: int = 5
     
     class Config:
         env_file = ".env"
