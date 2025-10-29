@@ -24,26 +24,30 @@ class OpenAIService:
             Respuesta de texto del asistente
         """
         try:
-            logger.info(f"📦 Codificando audio a base64... ({len(audio_data)} bytes)")
+            logger.info(
+                f"📦 Codificando audio a base64... ({len(audio_data)} bytes)")
             audio_base64 = base64.b64encode(audio_data).decode("utf-8")
             logger.info(f"✅ Audio codificado ({len(audio_base64)} caracteres)")
 
-            logger.info("🚀 Enviando request a GPT-4o-mini...")
+            logger.info("🚀 Enviando request a gpt-4o-audio-preview...")
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o-audio-preview",
                 modalities=["text", "audio"],
                 audio={"voice": "alloy", "format": "wav"},
                 messages=[
                     {
                         "role": "system",
-                        "content": "Eres un asistente de información institucional."
+                        "content": "Eres un asistente de información institucional. Responde con voz natural."
                     },
                     {
                         "role": "user",
                         "content": [
                             {
                                 "type": "input_audio",
-                                "audio_url": f"data:audio/wav;base64,{audio_base64}"
+                                "input_audio": {
+                                    "data": audio_base64,
+                                    "format": "wav"
+                                }
                             }
                         ]
                     }
@@ -51,8 +55,12 @@ class OpenAIService:
             )
 
             logger.info("✅ Respuesta recibida de OpenAI")
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            if content is None:
+                raise ValueError("OpenAI retornó respuesta vacía")
+            return content
 
         except Exception as e:
-            logger.error(f"❌ Error procesando audio con OpenAI: {e}", exc_info=True)
+            logger.error(
+                f"❌ Error procesando audio con OpenAI: {e}", exc_info=True)
             raise
