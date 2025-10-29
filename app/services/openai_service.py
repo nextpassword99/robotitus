@@ -27,13 +27,21 @@ class OpenAIService:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 modalities=["text", "audio"],
+                audio={"voice": "alloy", "format": "wav"},
                 messages=[
-                    {"role": "system",
-                        "content": "Eres un asistente de información institucional."},
-                    {"role": "user", "content": [
-                        {"type": "input_audio", "input_audio": {
-                            "data": audio_base64, "format": "wav"}}
-                    ]}
+                    {
+                        "role": "system",
+                        "content": "Eres un asistente de información institucional."
+                    },
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "input_audio",
+                                "audio_url": f"data:audio/wav;base64,{audio_base64}"
+                            }
+                        ]
+                    }
                 ]
             )
 
