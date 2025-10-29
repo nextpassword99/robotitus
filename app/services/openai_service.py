@@ -1,66 +1,95 @@
-import base64
-import io
 from openai import OpenAI
 from app.core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
-
-class OpenAIService:
+class SpeechRecognitionService:
+    """Servicio de reconocimiento de voz usando Whisper de OpenAI"""
+    
     def __init__(self):
-        logger.info("🔧 Inicializando cliente OpenAI...")
         self.client = OpenAI(api_key=settings.openai_api_key)
-        logger.info("✅ Cliente OpenAI inicializado")
-
-    async def process_audio(self, audio_data: bytes) -> str:
+        logger.info("✅ Speech Recognition Service inicializado")
+    
+    async def transcribe(self, audio_data: bytes) -> str:
         """
-        Procesa audio y obtiene respuesta de GPT-4o-mini.
-
+        Transcribe audio a texto usando Whisper.
+        
         Args:
-            audio_data: Audio en formato PCM 16-bit mono
-
+            audio_data: Audio en formato WAV
+            
         Returns:
-            Respuesta de texto del asistente
+            Texto transcrito
         """
         try:
-            logger.info(
-                f"📦 Codificando audio a base64... ({len(audio_data)} bytes)")
-            audio_base64 = base64.b64encode(audio_data).decode("utf-8")
-            logger.info(f"✅ Audio codificado ({len(audio_base64)} caracteres)")
+            logger.info(f"🎤 Transcribiendo audio ({len(audio_data)} bytes)...")
+            
+            response = self.client.audio.transcriptions.create(
+                model="whisper-1",
+                file=("audio.wav", audio_data, "audio/wav")
+            )
+            
+            text = response.text
+            logger.info(f"✅ Transcripción: {text}")
+            return text
+            
+        except Exception as e:
+            logger.error(f"❌ Error transcribiendo: {e}")
+            raise
 
-            logger.info("🚀 Enviando request a gpt-4o-audio-preview...")
+
+class LLMService:
+    """Servicio de LLM usando GPT-4o-mini de OpenAI"""
+    
+    def __init__(self):
+        self.client = OpenAI(api_key=settings.openai_api_key)
+        self.conversation_history = []
+        logger.info("✅ LLM Service inicializado")
+    
+    async def get_response(self, user_message: str) -> str:
+        """
+        Obtiene respuesta del LLM.
+        
+        Args:
+            user_message: Mensaje del usuario
+            
+        Returns:
+            Respuesta del asistente
+        """
+        try:
+            self.conversation_history.append({
+                "role": "user",
+                "content": user_message
+            })
+            
+            logger.info(f"🤖 Consultando GPT-4o-mini...")
+            
             response = self.client.chat.completions.create(
-                model="gpt-4o-audio-preview",
-                modalities=["text", "audio"],
-                audio={"voice": "alloy", "format": "wav"},
+                model="gpt-4o-mini",
                 messages=[
                     {
                         "role": "system",
-                        "content": "Eres un asistente de información institucional. Responde con voz natural."
+                        "content": "Eres un asistente de información institucional. Responde de forma clara y concisa."
                     },
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "input_audio",
-                                "input_audio": {
-                                    "data": audio_base64,
-                                    "format": "wav"
-                                }
-                            }
-                        ]
-                    }
+                    *self.conversation_history
                 ]
             )
-
-            logger.info("✅ Respuesta recibida de OpenAI")
-            content = response.choices[0].message.content
-            if content is None:
-                raise ValueError("OpenAI retornó respuesta vacía")
-            return content
-
+            
+            assistant_message = response.choices[0].message.content
+            
+            self.conversation_history.append({
+                "role": "assistant",
+                "content": assistant_message
+            })
+            
+            logger.info(f"✅ Respuesta: {assistant_message[:100]}...")
+            return assistant_message
+            
         except Exception as e:
-            logger.error(
-                f"❌ Error procesando audio con OpenAI: {e}", exc_info=True)
+            logger.error(f"❌ Error en LLM: {e}")
             raise
+    
+    def reset_conversation(self):
+        """Reinicia el historial de conversación"""
+        self.conversation_history = []
+        logger.info("🔄 Conversación reiniciada")
