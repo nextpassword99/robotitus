@@ -10,12 +10,12 @@ class WakeWordDetector:
     def __init__(self):
         logger.info(f"🔧 Inicializando detector con modelo: {settings.wake_word_model}")
         self.model = Model(
-            wakeword_models=[settings.wake_word_model],
+            wakeword_models=[settings.wake_word_model_path],
             inference_framework='onnx'
         )
         self.threshold = settings.detection_threshold
         self.buffer = np.array([], dtype=np.float32)
-        self.melspec_buffer = []
+        self.model_name = settings.wake_word_model
         logger.info(f"✅ Detector inicializado (threshold: {self.threshold})")
     
     def detect(self, audio_chunk: bytes) -> tuple[bool, float]:
@@ -54,7 +54,7 @@ class WakeWordDetector:
                 # Predecir
                 prediction = self.model.predict(frame)
                 
-                confidence = prediction.get(settings.wake_word_model, 0.0)
+                confidence = prediction.get(self.model_name, 0.0)
                 detected = confidence >= self.threshold
                 
                 return detected, float(confidence)

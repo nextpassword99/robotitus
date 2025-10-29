@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     silence_threshold: int = 500
     silence_duration: float = 1.5
     
+    @property
+    def wake_word_model_path(self) -> str:
+        return f"app/models/{self.wake_word_model}.onnx"
+    
     class Config:
         env_file = ".env"
 
