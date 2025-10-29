@@ -37,8 +37,8 @@ async def audio_stream(websocket: WebSocket):
             if not listening:
                 detected, confidence = wake_detector.detect(audio_chunk)
                 
-                if chunk_count % 50 == 0:
-                    logger.debug(f"🔍 Detectando wake word... confianza actual: {confidence:.3f}")
+                if chunk_count % 10 == 0:
+                    logger.info(f"🔍 Wake word confianza: {confidence:.4f} (threshold: {settings.detection_threshold})")
                 
                 if detected:
                     logger.info(f"🎤 ¡ALEXA ACTIVADA! (confianza: {confidence:.2f})")
