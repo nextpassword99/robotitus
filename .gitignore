@@ -11,3 +11,5 @@ dist/
 *.log
 data/chroma/
 .DS_Store
+
+/data/*/*.json
