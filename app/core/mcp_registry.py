@@ -19,7 +19,7 @@ class MCPServerConfig(BaseModel):
 class MCPRegistry:
     """Registro de servidores MCP disponibles"""
 
-    def __init__(self, config_file: str = "data/mcp/servers.json"):
+    def __init__(self, config_file: str = "./data/mcp/servers.json"):
         self.servers: Dict[str, MCPServerConfig] = {}
         self._load_from_json(config_file)
     

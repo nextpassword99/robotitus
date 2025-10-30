@@ -90,8 +90,12 @@ class MCPClient:
     async def start_server(self, server_key: str) -> bool:
         """Inicia un servidor MCP y obtiene sus tools"""
         config = mcp_registry.get_server(server_key)
-        if not config or not config.enabled:
-            logger.warning(f"⚠️ Servidor {server_key} no disponible")
+        if not config:
+            logger.error(f"❌ Servidor '{server_key}' no encontrado en configuración")
+            return False
+        
+        if not config.enabled:
+            logger.info(f"⏭️ Servidor '{server_key}' deshabilitado, omitiendo...")
             return False
         
         try:
@@ -107,7 +111,7 @@ class MCPClient:
             return True
             
         except Exception as e:
-            logger.error(f"❌ Error iniciando servidor {server_key}: {e}")
+            logger.error(f"❌ Error iniciando servidor '{server_key}': {e}")
             return False
     
     async def execute_tool(self, tool_name: str, arguments: dict) -> Optional[str]:

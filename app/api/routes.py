@@ -1,7 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.openai_service import SpeechRecognitionService, LLMService
 from app.core.config import settings
-from app.core.mcp_registry import mcp_registry
 import logging
 
 router = APIRouter()
@@ -90,36 +89,3 @@ async def list_mcp_servers():
     if llm_service.mcp_client:
         return llm_service.mcp_client.list_available_servers()
     return {}
-
-@router.post("/mcp/servers/{server_key}/start")
-async def start_mcp_server(server_key: str):
-    """Inicia un servidor MCP específico"""
-    if not settings.use_mcp or not llm_service.mcp_client:
-        raise HTTPException(status_code=400, detail="MCP no está habilitado")
-    
-    success = await llm_service.mcp_client.start_server(server_key)
-    if success:
-        return {"status": "ok", "message": f"Servidor {server_key} iniciado"}
-    else:
-        raise HTTPException(status_code=500, detail=f"Error iniciando servidor {server_key}")
-
-@router.post("/mcp/servers/{server_key}/stop")
-async def stop_mcp_server(server_key: str):
-    """Detiene un servidor MCP específico"""
-    if not settings.use_mcp or not llm_service.mcp_client:
-        raise HTTPException(status_code=400, detail="MCP no está habilitado")
-    
-    await llm_service.mcp_client.stop_server(server_key)
-    return {"status": "ok", "message": f"Servidor {server_key} detenido"}
-
-@router.post("/mcp/servers/{server_key}/enable")
-async def enable_mcp_server(server_key: str):
-    """Habilita un servidor MCP en el registro"""
-    mcp_registry.enable_server(server_key)
-    return {"status": "ok", "message": f"Servidor {server_key} habilitado"}
-
-@router.post("/mcp/servers/{server_key}/disable")
-async def disable_mcp_server(server_key: str):
-    """Deshabilita un servidor MCP en el registro"""
-    mcp_registry.disable_server(server_key)
-    return {"status": "ok", "message": f"Servidor {server_key} deshabilitado"}
