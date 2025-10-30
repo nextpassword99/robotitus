@@ -1,6 +1,9 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
 import os
+import json
+import re
+from pathlib import Path
 
 
 class MCPServerConfig(BaseModel):
@@ -16,17 +19,30 @@ class MCPServerConfig(BaseModel):
 class MCPRegistry:
     """Registro de servidores MCP disponibles"""
 
-    def __init__(self):
-        self.servers: Dict[str, MCPServerConfig] = {
-            "serper": MCPServerConfig(
-                name="serper-mcp",
-                command="uvx",
-                args=["serper-mcp-server"],
-                env={
-                    "SERPER_API_KEY": os.getenv("SERPER_API_KEY", "")
-                }
-            ),
-        }
+    def __init__(self, config_file: str = "data/mcp/servers.json"):
+        self.servers: Dict[str, MCPServerConfig] = {}
+        self._load_from_json(config_file)
+    
+    def _resolve_env_vars(self, value: Any) -> Any:
+        """Resuelve variables de entorno recursivamente"""
+        if isinstance(value, str):
+            # Reemplazar ${VAR_NAME} con el valor de la variable
+            return re.sub(r'\$\{([^}]+)\}', lambda m: os.getenv(m.group(1), ""), value)
+        elif isinstance(value, dict):
+            return {k: self._resolve_env_vars(v) for k, v in value.items()}
+        elif isinstance(value, list):
+            return [self._resolve_env_vars(item) for item in value]
+        return value
+    
+    def _load_from_json(self, config_file: str):
+        """Carga servidores desde JSON"""
+        config_path = Path(config_file)
+        if config_path.exists():
+            with open(config_path, 'r') as f:
+                data = json.load(f)
+                for key, server_data in data.items():
+                    resolved_data = self._resolve_env_vars(server_data)
+                    self.servers[key] = MCPServerConfig(**resolved_data)
 
     def get_server(self, name: str) -> Optional[MCPServerConfig]:
         """Obtiene configuración de un servidor"""
