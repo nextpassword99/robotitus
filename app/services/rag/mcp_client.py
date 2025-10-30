@@ -1,7 +1,7 @@
 import logging
+import asyncio
 from typing import Dict, List, Optional
 from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import StdioServerParameters as StdioParams
 from mcp.client.stdio import stdio_client
 from app.core.config import settings
 from app.core.mcp_registry import mcp_registry
@@ -18,10 +18,10 @@ class MCPClient:
         self.transports: Dict[str, any] = {}
         self.tool_to_server: Dict[str, str] = {}
         self.available_tools: List[dict] = []
-        logger.info(f"✅ MCP Client inicializado (enabled={self.enabled})")
+        logger.info(f"✅ MCP Client creado (enabled={self.enabled})")
     
-    async def initialize_servers(self):
-        """Inicializa servidores MCP habilitados"""
+    async def connect_all(self):
+        """Conecta a todos los servidores MCP habilitados"""
         if not self.enabled:
             logger.info("MCP deshabilitado")
             return

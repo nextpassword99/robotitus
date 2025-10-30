@@ -47,11 +47,10 @@ class LLMService:
         self.mcp_client = MCPClient() if settings.use_mcp else None
         
         logger.info("✅ LLM Service inicializado")
-    
-    async def initialize(self):
-        """Inicializa servidores MCP"""
+        
         if self.mcp_client:
-            await self.mcp_client.initialize_servers()
+            import asyncio
+            asyncio.create_task(self.mcp_client.connect_all())
     
     async def chat(self, messages: list, use_tools: bool = True) -> dict:
         """Chat con soporte de tools MCP"""
