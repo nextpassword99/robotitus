@@ -28,10 +28,6 @@ class Settings(BaseSettings):
 
     # MCP Server API Keys
     serper_api_key: str = ""
-    whatsapp_api_key: str = ""
-    google_oauth_client_id: str = ""
-    google_oauth_client_secret: str = ""
-    user_google_email: str = ""
 
     # Data
     data_dir: str = "./data/senati"
