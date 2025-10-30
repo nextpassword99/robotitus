@@ -26,9 +26,6 @@ class Settings(BaseSettings):
     use_mcp: bool = False
     mcp_enabled_servers: List[str] = ["serper"]
 
-    # MCP Server API Keys
-    serper_api_key: str = ""
-
     # Data
     data_dir: str = "./data/senati"
 
