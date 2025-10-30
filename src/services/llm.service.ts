@@ -11,8 +11,12 @@ export class LLMService {
 
   constructor() {
     this.client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
-    this.vectorStore = env.USE_RAG ? new VectorStoreService() : undefined;
-    this.mcpService = env.USE_MCP ? new MCPService() : undefined;
+    if (env.USE_RAG) {
+      this.vectorStore = new VectorStoreService();
+    }
+    if (env.USE_MCP) {
+      this.mcpService = new MCPService();
+    }
     console.log('✅ LLM Service inicializado');
   }
 
@@ -30,8 +34,12 @@ export class LLMService {
   async getResponse(userMessage: string): Promise<string> {
     let context = '';
     if (this.vectorStore) {
-      const ragContext = await this.vectorStore.getContext(userMessage);
-      if (ragContext) context += `\n\nCONTEXTO SENATI:\n${ragContext}`;
+      try {
+        const ragContext = await this.vectorStore.getContext(userMessage);
+        if (ragContext) context += `\n\nCONTEXTO SENATI:\n${ragContext}`;
+      } catch (error) {
+        console.warn('⚠️ Error obteniendo contexto RAG:', error);
+      }
     }
 
     let systemMessage = `Eres un asistente virtual de SENATI (Servicio Nacional de Adiestramiento en Trabajo Industrial).

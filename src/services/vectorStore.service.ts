@@ -19,15 +19,16 @@ export class VectorStoreService {
       openAIApiKey: env.OPENAI_API_KEY
     });
     this.client = new ChromaClient({ path: env.CHROMA_PERSIST_DIR });
-    this.initVectorStore();
     console.log(`✅ VectorStore inicializado: ${env.COLLECTION_NAME}`);
   }
 
   private async initVectorStore() {
-    this.vectorstore = await Chroma.fromExistingCollection(this.embeddings, {
-      collectionName: env.COLLECTION_NAME,
-      url: env.CHROMA_PERSIST_DIR
-    });
+    try {
+      const collection = await this.client.getOrCreateCollection({ name: env.COLLECTION_NAME });
+      this.vectorstore = new Chroma(this.embeddings, { collectionName: env.COLLECTION_NAME, index: collection });
+    } catch (error) {
+      console.warn('⚠️ No se pudo conectar a ChromaDB, continuando sin RAG');
+    }
   }
 
   async loadDocuments() {
@@ -70,16 +71,20 @@ export class VectorStoreService {
     });
     const chunks = await splitter.splitDocuments(documents);
     console.log(`📊 Generando ${chunks.length} chunks...`);
-    this.vectorstore = await Chroma.fromDocuments(chunks, this.embeddings, {
-      collectionName: env.COLLECTION_NAME,
-      url: env.CHROMA_PERSIST_DIR
+    const collection = await this.client.getOrCreateCollection({ name: env.COLLECTION_NAME });
+    await collection.add({
+      ids: chunks.map((_, i) => `doc_${i}`),
+      documents: chunks.map(c => c.pageContent),
+      metadatas: chunks.map(c => c.metadata)
     });
+    this.vectorstore = new Chroma(this.embeddings, { collectionName: env.COLLECTION_NAME, index: collection });
     console.log(`✅ ${chunks.length} chunks indexados`);
   }
 
   async search(query: string, k?: number) {
     if (!this.vectorstore) await this.initVectorStore();
-    const results = await this.vectorstore!.similaritySearch(query, k || env.TOP_K_RESULTS);
+    if (!this.vectorstore) return [];
+    const results = await this.vectorstore.similaritySearch(query, k || env.TOP_K_RESULTS);
     console.log(`🔍 Encontrados ${results.length} resultados`);
     return results;
   }
