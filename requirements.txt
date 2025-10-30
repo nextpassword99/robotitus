@@ -1,13 +1,13 @@
 fastapi
 uvicorn[standard]
 pydantic-settings
-openai
+openai>=1.40.0,<2.0.0
 python-multipart
 chromadb
 langchain
-langchain-openai
+langchain-openai>=0.1.0
 langchain-community
 pypdf
-httpx
+httpx>=0.25.0,<0.28.0
 mcp
 anyio
