@@ -1,0 +1,35 @@
+{
+  "name": "senati-assistant-api",
+  "version": "1.0.0",
+  "description": "Sistema de asistencia conversacional para SENATI con RAG y MCP",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "load-kb": "tsx src/scripts/loadKnowledgeBase.ts"
+  },
+  "keywords": ["senati", "rag", "mcp", "openai", "chromadb"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "chromadb": "^1.9.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "langchain": "^0.3.7",
+    "@langchain/openai": "^0.3.14",
+    "@langchain/community": "^0.3.16",
+    "multer": "^1.4.5-lts.1",
+    "openai": "^4.77.3",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
