@@ -14,7 +14,7 @@ class MCPServerConnection:
         self.server_key = server_key
         self.config = config
         self.session: Optional[ClientSession] = None
-        self.exit_stack = None
+        self.context_manager = None
     
     async def connect(self):
         """Conecta al servidor MCP"""
@@ -24,9 +24,9 @@ class MCPServerConnection:
             env=self.config.env
         )
         
-        stdio_transport = await stdio_client(server_params)
-        self.exit_stack = stdio_transport
-        self.session = ClientSession(stdio_transport[0], stdio_transport[1])
+        self.context_manager = stdio_client(server_params)
+        read_stream, write_stream = await self.context_manager.__aenter__()
+        self.session = ClientSession(read_stream, write_stream)
         
         await self.session.initialize()
         logger.info(f"✅ Conectado a servidor MCP: {self.config.name}")
@@ -65,8 +65,8 @@ class MCPServerConnection:
     
     async def close(self):
         """Cierra la conexión"""
-        if self.exit_stack:
-            await self.exit_stack.__aexit__(None, None, None)
+        if self.context_manager:
+            await self.context_manager.__aexit__(None, None, None)
         logger.info(f"🛑 Desconectado de: {self.config.name}")
 
 
