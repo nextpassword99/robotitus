@@ -84,7 +84,7 @@ class MCPClient:
         if not self.enabled:
             return
         
-        for server_key in settings.mcp_enabled_servers:
+        for server_key in mcp_registry.get_enabled_servers().keys():
             await self.start_server(server_key)
     
     async def start_server(self, server_key: str) -> bool:
