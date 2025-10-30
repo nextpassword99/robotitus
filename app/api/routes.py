@@ -80,6 +80,23 @@ async def get_config():
         "collection_name": settings.collection_name
     }
 
+@router.post("/mcp/initialize")
+async def initialize_mcp():
+    """Inicializa servidores MCP"""
+    if not settings.use_mcp:
+        raise HTTPException(status_code=400, detail="MCP no está habilitado")
+    
+    try:
+        await llm_service.initialize()
+        return {
+            "status": "ok",
+            "message": "Servidores MCP inicializados",
+            "tools_count": len(llm_service.mcp_client.get_tools()) if llm_service.mcp_client else 0
+        }
+    except Exception as e:
+        logger.error(f"❌ Error inicializando MCP: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/mcp/servers")
 async def list_mcp_servers():
     """Lista servidores MCP disponibles"""
@@ -89,3 +106,15 @@ async def list_mcp_servers():
     if llm_service.mcp_client:
         return llm_service.mcp_client.list_available_servers()
     return {}
+
+@router.get("/mcp/tools")
+async def list_mcp_tools():
+    """Lista todas las herramientas MCP disponibles"""
+    if not settings.use_mcp or not llm_service.mcp_client:
+        raise HTTPException(status_code=400, detail="MCP no está habilitado")
+    
+    tools = llm_service.mcp_client.get_tools()
+    return {
+        "count": len(tools),
+        "tools": [t["function"]["name"] for t in tools]
+    }

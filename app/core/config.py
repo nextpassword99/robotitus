@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     top_k_results: int = 3
 
     # MCP
-    use_mcp: bool = False
+    use_mcp: bool = True
 
     # Data
     data_dir: str = "./data/senati"
