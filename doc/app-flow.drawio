@@ -1,0 +1,279 @@
+<mxfile host="65bd71144e">
+    <diagram id="codeviz-diagram" name="System Diagram">
+        <mxGraphModel dx="1086" dy="1606" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="base-diagram-group" value="" style="html=1;whiteSpace=wrap;container=1;fillColor=#dae8fc;strokeColor=#6c8ebf;dashed=1;fillOpacity=20;strokeWidth=2;containerType=none;recursiveResize=0;movable=1;resizable=1;autosize=0;dropTarget=0" parent="1" vertex="1">
+                    <mxGeometry x="20" width="1012" height="1292" as="geometry"/>
+                </mxCell>
+                <mxCell id="robotitus_ia_boundary" value="" style="html=1;whiteSpace=wrap;container=1;fillColor=#dae8fc;strokeColor=#6c8ebf;dashed=1;fillOpacity=20;strokeWidth=2;containerType=none;recursiveResize=0;movable=1;resizable=1;autosize=0;dropTarget=0" parent="base-diagram-group" vertex="1">
+                    <mxGeometry x="40" y="106" width="821" height="1080" as="geometry"/>
+                </mxCell>
+                <mxCell id="frontend_boundary" value="" style="html=1;whiteSpace=wrap;container=1;fillColor=#dae8fc;strokeColor=#6c8ebf;dashed=1;fillOpacity=20;strokeWidth=2;containerType=none;recursiveResize=0;movable=1;resizable=1;autosize=0;dropTarget=0" parent="robotitus_ia_boundary" vertex="1">
+                    <mxGeometry x="210.89999999999998" y="-34" width="312" height="350" as="geometry"/>
+                </mxCell>
+                <mxCell id="ui_component" value="UI Component" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="frontend_boundary" vertex="1">
+                    <mxGeometry x="125.75000000000001" y="107" width="100" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="audio_processor" value="Audio Processor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="frontend_boundary" vertex="1">
+                    <mxGeometry x="66" y="188" width="109" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="client_wake_word_detector" value="Client-side Wake Word Detector" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="frontend_boundary" vertex="1">
+                    <mxGeometry x="20" y="269" width="201" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="frontend_boundary_label" value="Frontend Application" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;labelBackgroundColor=white;spacing=5" parent="robotitus_ia_boundary" vertex="1">
+                    <mxGeometry x="218.89999999999998" y="-26" width="236" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="backend_api_boundary" value="" style="html=1;whiteSpace=wrap;container=1;fillColor=#dae8fc;strokeColor=#6c8ebf;dashed=1;fillOpacity=20;strokeWidth=2;containerType=none;recursiveResize=0;movable=1;resizable=1;autosize=0;dropTarget=0" parent="robotitus_ia_boundary" vertex="1">
+                    <mxGeometry x="40" y="306" width="781" height="451" as="geometry"/>
+                </mxCell>
+                <mxCell id="api_gateway" value="API Gateway/Router" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="backend_api_boundary" vertex="1">
+                    <mxGeometry x="336.4" y="107" width="131" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="chat_controller" value="Chat Controller" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="backend_api_boundary" vertex="1">
+                    <mxGeometry x="349.70000000000005" y="188" width="103" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="audio_controller" value="Audio Controller" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="backend_api_boundary" vertex="1">
+                    <mxGeometry x="590.25" y="188" width="111" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="porcupine_controller" value="Porcupine Controller" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="backend_api_boundary" vertex="1">
+                    <mxGeometry x="20" y="188" width="134" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="llm_service_comp" value="LLM Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="backend_api_boundary" vertex="1">
+                    <mxGeometry x="506.25" y="289" width="84" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="openai_service_comp" value="OpenAI Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="backend_api_boundary" vertex="1">
+                    <mxGeometry x="454" y="370" width="103" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="tts_service_comp" value="TTS Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="backend_api_boundary" vertex="1">
+                    <mxGeometry x="610.25" y="289" width="81" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="vector_store_service_comp" value="Vector Store Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="backend_api_boundary" vertex="1">
+                    <mxGeometry x="205" y="289" width="130" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="mcp_service_comp" value="MCP Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="backend_api_boundary" vertex="1">
+                    <mxGeometry x="98" y="289" width="87" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="kb_loader" value="Knowledge Base Loader" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="backend_api_boundary" vertex="1">
+                    <mxGeometry x="281" y="370" width="153" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="backend_api_boundary_label" value="Backend API" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;labelBackgroundColor=white;spacing=5" parent="robotitus_ia_boundary" vertex="1">
+                    <mxGeometry x="48" y="314" width="705" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="vector_store_boundary" value="" style="html=1;whiteSpace=wrap;container=1;fillColor=#dae8fc;strokeColor=#6c8ebf;dashed=1;fillOpacity=20;strokeWidth=2;containerType=none;recursiveResize=0;movable=1;resizable=1;autosize=0;dropTarget=0" parent="robotitus_ia_boundary" vertex="1">
+                    <mxGeometry x="236.25" y="747" width="389" height="209" as="geometry"/>
+                </mxCell>
+                <mxCell id="chromadb_instance" value="ChromaDB Instance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="vector_store_boundary" vertex="1">
+                    <mxGeometry x="20" y="107" width="129" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="knowledge_base_data" value="Knowledge Base Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="vector_store_boundary" vertex="1">
+                    <mxGeometry x="169" y="107" width="140" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="vector_store_boundary_label" value="Vector Store" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;labelBackgroundColor=white;spacing=5" parent="robotitus_ia_boundary" vertex="1">
+                    <mxGeometry x="244.25" y="755" width="313" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="robotitus_ia_boundary_label" value="Robotitus AI Assistant" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;labelBackgroundColor=white;spacing=5" parent="base-diagram-group" vertex="1">
+                    <mxGeometry x="48" y="114" width="745" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="user" value="User" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="base-diagram-group" vertex="1">
+                    <mxGeometry x="365.65" y="60" width="42" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="openai" value="OpenAI API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="base-diagram-group" vertex="1">
+                    <mxGeometry x="471.25" y="1211" width="82" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="porcupine_ext" value="Porcupine Wake Word Engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="base-diagram-group" vertex="1">
+                    <mxGeometry x="27" y="1211" width="186" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="tts_service_ext" value="Text-to-Speech Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="base-diagram-group" vertex="1">
+                    <mxGeometry x="785.25" y="1211" width="147" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="llm_service_ext" value="Large Language Model Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="base-diagram-group" vertex="1">
+                    <mxGeometry x="573.25" y="1211" width="192" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="mcp_system_ext" value="MCP System" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5" parent="base-diagram-group" vertex="1">
+                    <mxGeometry x="233" y="1211" width="87" height="41" as="geometry"/>
+                </mxCell>
+                <mxCell id="base-diagram-group_label" value="Base Diagram" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;labelBackgroundColor=white;spacing=5" parent="1" vertex="1">
+                    <mxGeometry x="28" y="8" width="936" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-user-ui_component" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="user" target="ui_component" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-user-ui_component_label" value="Interacts with" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-user-ui_component" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-ui_component-audio_processor" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="ui_component" target="audio_processor" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-ui_component-audio_processor_label" value="Sends commands to" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-ui_component-audio_processor" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-audio_processor-client_wake_word_detector" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="audio_processor" target="client_wake_word_detector" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-audio_processor-client_wake_word_detector_label" value="Feeds audio to" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-audio_processor-client_wake_word_detector" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-ui_component-api_gateway" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="ui_component" target="api_gateway" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-ui_component-api_gateway_label" value="Makes API calls to | HTTPS/JSON" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-ui_component-api_gateway" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-api_gateway-chat_controller" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="api_gateway" target="chat_controller" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-api_gateway-chat_controller_label" value="Routes requests to" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-api_gateway-chat_controller" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-api_gateway-audio_controller" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="api_gateway" target="audio_controller" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-api_gateway-audio_controller_label" value="Routes requests to" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-api_gateway-audio_controller" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-api_gateway-porcupine_controller" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="api_gateway" target="porcupine_controller" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-api_gateway-porcupine_controller_label" value="Routes requests to" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-api_gateway-porcupine_controller" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-chat_controller-llm_service_comp" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="chat_controller" target="llm_service_comp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-chat_controller-llm_service_comp_label" value="Uses" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-chat_controller-llm_service_comp" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-chat_controller-vector_store_service_comp" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="chat_controller" target="vector_store_service_comp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-chat_controller-vector_store_service_comp_label" value="Queries" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-chat_controller-vector_store_service_comp" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-chat_controller-tts_service_comp" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="chat_controller" target="tts_service_comp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-chat_controller-tts_service_comp_label" value="Uses" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-chat_controller-tts_service_comp" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-chat_controller-mcp_service_comp" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="chat_controller" target="mcp_service_comp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-chat_controller-mcp_service_comp_label" value="Uses" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-chat_controller-mcp_service_comp" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-audio_controller-llm_service_comp" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="audio_controller" target="llm_service_comp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-audio_controller-llm_service_comp_label" value="Uses for transcription" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-audio_controller-llm_service_comp" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-audio_controller-tts_service_comp" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="audio_controller" target="tts_service_comp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-audio_controller-tts_service_comp_label" value="Uses for response generation" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-audio_controller-tts_service_comp" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-porcupine_controller-porcupine_ext" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="porcupine_controller" target="porcupine_ext" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-porcupine_controller-porcupine_ext_label" value="Uses | Local Library/API" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-porcupine_controller-porcupine_ext" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-llm_service_comp-openai_service_comp" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="llm_service_comp" target="openai_service_comp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-llm_service_comp-openai_service_comp_label" value="Delegates to" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-llm_service_comp-openai_service_comp" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-openai_service_comp-openai" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="openai_service_comp" target="openai" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-openai_service_comp-openai_label" value="Uses | HTTPS/API" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-openai_service_comp-openai" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-llm_service_comp-llm_service_ext" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="llm_service_comp" target="llm_service_ext" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-llm_service_comp-llm_service_ext_label" value="Uses | HTTPS/API" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-llm_service_comp-llm_service_ext" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-tts_service_comp-tts_service_ext" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="tts_service_comp" target="tts_service_ext" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-tts_service_comp-tts_service_ext_label" value="Uses | HTTPS/API" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-tts_service_comp-tts_service_ext" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-mcp_service_comp-mcp_system_ext" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="mcp_service_comp" target="mcp_system_ext" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-mcp_service_comp-mcp_system_ext_label" value="Uses | HTTPS/API" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-mcp_service_comp-mcp_system_ext" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-vector_store_service_comp-chromadb_instance" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="vector_store_service_comp" target="chromadb_instance" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-vector_store_service_comp-chromadb_instance_label" value="Reads from and Writes to | API" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-vector_store_service_comp-chromadb_instance" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-kb_loader-knowledge_base_data" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="kb_loader" target="knowledge_base_data" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-kb_loader-knowledge_base_data_label" value="Reads from" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-kb_loader-knowledge_base_data" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-e-kb_loader-chromadb_instance" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#808080;strokeWidth=2;jumpStyle=arc;jumpSize=10;spacing=15;labelBackgroundColor=white;labelBorderColor=none" parent="1" source="kb_loader" target="chromadb_instance" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-e-kb_loader-chromadb_instance_label" value="Writes to | API" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="edge-e-kb_loader-chromadb_instance" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
