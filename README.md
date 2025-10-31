@@ -42,6 +42,10 @@ SILENCE_TIMEOUT_SEC=2
 npm run dev
 ```
 
+Luego abre tu navegador en: **http://localhost:8000**
+
+Luego abre tu navegador en: **http://localhost:8000**
+
 ### Iniciar servidor (producción)
 
 ```bash
@@ -77,27 +81,22 @@ Health check
 curl http://localhost:8000/health
 ```
 
-#### POST /api/porcupine/start
-Inicia detección continua de palabra clave (flujo completo automático)
-```bash
-curl -X POST http://localhost:8000/api/porcupine/start \
-  -H "Content-Type: application/json" \
-  -d '{"keywordIndex": 0}'
-```
+#### Interfaz Web Porcupine
+Abre http://localhost:8000 en tu navegador para:
+1. Seleccionar palabra clave (emparedado, leopardo, manzana, murciélago)
+2. Iniciar detección continua
+3. Hablar la palabra clave
+4. El sistema graba 5 segundos automáticamente
+5. Transcribe y genera respuesta
 
 **Flujo automático:**
-1. 🎤 Escucha continua de palabra clave
+1. 🎤 Escucha continua de palabra clave en el navegador
 2. 🔔 Detecta palabra (ej: "emparedado")
 3. 🎙️ Graba comando del usuario (5 segundos)
-4. 🔄 Transcribe con Whisper
-5. 🤖 Genera respuesta con GPT-4o-mini
-6. 💬 Retorna resultado en consola
-
-#### POST /api/porcupine/stop
-Detiene detección de palabra clave
-```bash
-curl -X POST http://localhost:8000/api/porcupine/stop
-```
+4. 📤 Envía audio al servidor
+5. 🔄 Transcribe con Whisper
+6. 🤖 Genera respuesta con GPT-4o-mini
+7. 💬 Muestra resultado en pantalla
 
 #### GET /api/porcupine/keywords
 Lista palabras clave disponibles

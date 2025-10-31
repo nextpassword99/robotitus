@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SENATI Assistant - Wake Word</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+    h1 { color: #333; }
+    .status { padding: 15px; margin: 10px 0; border-radius: 5px; background: #f0f0f0; }
+    .result { padding: 15px; margin: 10px 0; border-radius: 5px; background: #e8f5e9; }
+    button { padding: 10px 20px; margin: 5px; font-size: 16px; cursor: pointer; }
+    select { padding: 10px; font-size: 16px; margin: 10px 0; }
+    .active { background: #4CAF50; color: white; }
+  </style>
+</head>
+<body>
+  <h1>🎤 SENATI Assistant - Wake Word Detection</h1>
+  
+  <div>
+    <label for="keywords">Palabra clave:</label>
+    <select id="keywords"></select>
+  </div>
+
+  <div>
+    <button id="startBtn" onclick="startPorcupine()">Iniciar Detección</button>
+    <button id="stopBtn" onclick="stopPorcupine()" disabled>Detener</button>
+  </div>
+
+  <div id="status" class="status">Estado: Detenido</div>
+  <div id="result" class="result">Esperando detección...</div>
+
+  <script type="module" src="/porcupine.js"></script>
+</body>
+</html>
