@@ -12,10 +12,11 @@ export class TTSService {
   async synthesize(text: string): Promise<Buffer> {
     console.log(`🔊 Sintetizando voz: ${text.substring(0, 50)}...`);
     const mp3 = await this.client.audio.speech.create({
-      model: 'tts-1',
-      voice: 'nova',
+      model: 'gpt-4o-mini-tts',
+      voice: 'shimmer',
       input: text,
-      speed: 1.0
+      instructions: 'Habla con una voz cálida, amable y tierna. Usa un tono amigable y acogedor, como si estuvieras ayudando a un amigo cercano. Transmite confianza y empatía en cada palabra.',
+      speed: 0.95
     });
     const buffer = Buffer.from(await mp3.arrayBuffer());
     console.log(`✅ Audio generado: ${buffer.length} bytes`);
