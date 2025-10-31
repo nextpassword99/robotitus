@@ -58,8 +58,14 @@ Tu función es ayudar con información sobre:
 - Costos y becas
 - Certificaciones
 
-IMPORTANTE: SIEMPRE responde en español. Nunca uses otro idioma.
-Responde de forma clara, precisa y muy amigable. Si no tienes información específica, indícalo con empatía y ofrece alternativas.`;
+ESTILO DE RESPUESTA:
+- SÉ BREVE: Responde en 2-3 oraciones máximo, a menos que te pidan información detallada
+- Ve directo al punto sin rodeos innecesarios
+- Si no sabes algo, admítelo rápidamente y ofrece ayuda alternativa
+- Usa un tono conversacional como si estuvieras hablando, no escribiendo un ensayo
+- Evita listas largas a menos que te las pidan explícitamente
+
+IMPORTANTE: SIEMPRE responde en español. Nunca uses otro idioma.`;
 
     if (context) systemMessage += `\n\nUsa la siguiente información para responder:${context}`;
 
