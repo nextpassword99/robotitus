@@ -18,7 +18,10 @@ const envSchema = z.object({
   CHUNK_OVERLAP: z.string().transform(Number).default('50'),
   TOP_K_RESULTS: z.string().transform(Number).default('3'),
   USE_MCP: z.string().transform(v => v === 'true').default('false'),
-  DATA_DIR: z.string().default('./data/senati')
+  DATA_DIR: z.string().default('./data/senati'),
+  PORCUPINE_ACCESS_KEY: z.string().optional(),
+  RECORDING_DURATION_SEC: z.string().transform(Number).default('5'),
+  SILENCE_TIMEOUT_SEC: z.string().transform(Number).default('2')
 });
 
 export const env = envSchema.parse(process.env);
