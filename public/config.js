@@ -1,5 +1,0 @@
-export const CONFIG = {
-  ACCESS_KEY: 'e52jZGc5CoakyDBGY44MaD5PtJtgONGq3HxLqWQNEwp6TPrTreXOIA==',
-  RECORDING_DURATION_MS: 5000,
-  API_BASE_URL: '/api'
-};

@@ -5,9 +5,8 @@ Sistema de asistencia conversacional para SENATI con RAG (Retrieval-Augmented Ge
 ## Características
 
 - 🎤 **Reconocimiento de voz** con Whisper
-- 🔔 **Wake Word Detection** con Porcupine (palabras clave en español)
-- 🎙️ **Grabación continua** en tiempo real
-- 🔄 **Flujo automático**: Palabra clave → Grabación → Transcripción → LLM → Respuesta
+- 🎙️ **Grabación de audio** en el navegador
+- 🔄 **Flujo automático**: Grabación → Transcripción → LLM → Respuesta
 - 🤖 **LLM** con GPT-4o-mini
 - 📚 **RAG** con ChromaDB para contexto institucional (opcional)
 - 🔌 **MCP Multi-Servidor** (opcional)
@@ -27,11 +26,8 @@ npm install
 
 ```env
 OPENAI_API_KEY=tu_api_key_aqui
-PORCUPINE_ACCESS_KEY=tu_porcupine_key_aqui
 USE_RAG=false
 USE_MCP=false
-RECORDING_DURATION_SEC=5
-SILENCE_TIMEOUT_SEC=2
 ```
 
 ## Uso
@@ -81,34 +77,19 @@ Health check
 curl http://localhost:8000/health
 ```
 
-#### Interfaz Web Porcupine
+#### Interfaz Web
 Abre http://localhost:8000 en tu navegador para:
-1. Seleccionar palabra clave (emparedado, leopardo, manzana, murciélago)
-2. Iniciar detección continua
-3. Hablar la palabra clave
-4. El sistema graba 5 segundos automáticamente
-5. Transcribe y genera respuesta
+1. Presionar el micrófono para grabar
+2. Hablar tu pregunta
+3. Presionar de nuevo para detener
+4. El sistema transcribe y genera respuesta
 
 **Flujo automático:**
-1. 🎤 Escucha continua de palabra clave en el navegador
-2. 🔔 Detecta palabra (ej: "emparedado")
-3. 🎙️ Graba comando del usuario (5 segundos)
-4. 📤 Envía audio al servidor
-5. 🔄 Transcribe con Whisper
-6. 🤖 Genera respuesta con GPT-4o-mini
-7. 💬 Muestra resultado en pantalla
-
-#### GET /api/porcupine/keywords
-Lista palabras clave disponibles
-```bash
-curl http://localhost:8000/api/porcupine/keywords
-```
-
-#### GET /api/porcupine/status
-Estado de Porcupine
-```bash
-curl http://localhost:8000/api/porcupine/status
-```
+1. 🎙️ Usuario presiona micrófono y habla
+2. 📤 Audio se envía al servidor
+3. 🔄 Transcribe con Whisper
+4. 🤖 Genera respuesta con GPT-4o-mini
+5. 💬 Muestra resultado en pantalla
 
 ## Arquitectura
 

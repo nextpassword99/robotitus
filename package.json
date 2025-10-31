@@ -15,8 +15,6 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
-    "@picovoice/porcupine-web": "~3.0.3",
-    "@picovoice/web-voice-processor": "~4.0.8",
     "chromadb": "^1.9.2",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
