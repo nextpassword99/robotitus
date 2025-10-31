@@ -5,8 +5,9 @@ Sistema de asistencia conversacional para SENATI con RAG (Retrieval-Augmented Ge
 ## Características
 
 - 🎤 **Reconocimiento de voz** con Whisper
+- 🔊 **Síntesis de voz** con OpenAI TTS
 - 🎙️ **Grabación de audio** en el navegador
-- 🔄 **Flujo automático**: Grabación → Transcripción → LLM → Respuesta
+- 🔄 **Flujo automático**: Grabación → Transcripción → LLM → Respuesta → Audio
 - 🤖 **LLM** con GPT-4o-mini
 - 📚 **RAG** con ChromaDB para contexto institucional (opcional)
 - 🔌 **MCP Multi-Servidor** (opcional)
