@@ -14,7 +14,8 @@ export class SpeechService {
     const file = new File([audioData], 'audio.wav', { type: 'audio/wav' });
     const response = await this.client.audio.transcriptions.create({
       model: env.WHISPER_MODEL,
-      file
+      file,
+      language: 'es'
     });
     console.log(`✅ Transcripción: ${response.text}`);
     return response.text;
