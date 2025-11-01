@@ -1,13 +1,16 @@
 import WebSocket from 'ws';
 import { env } from '../config/env.js';
+import { MCPService } from './mcp.service.js';
 
 export class RealtimeService {
   private openaiWs: WebSocket | null = null;
   private clientWs: WebSocket | null = null;
   private sessionReady = false;
+  private mcpService: MCPService | null = null;
 
-  async connect(clientWs: WebSocket) {
+  async connect(clientWs: WebSocket, mcpService: MCPService | null = null) {
     this.clientWs = clientWs;
+    this.mcpService = mcpService;
     
     const url = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17';
     this.openaiWs = new WebSocket(url, {
@@ -21,7 +24,7 @@ export class RealtimeService {
       console.log('✅ Conectado a OpenAI Realtime API');
     });
 
-    this.openaiWs.on('message', (data) => {
+    this.openaiWs.on('message', async (data) => {
       const message = data.toString();
       const event = JSON.parse(message);
       console.log('📩 OpenAI:', event.type);
@@ -29,6 +32,12 @@ export class RealtimeService {
       if (event.type === 'session.created' && !this.sessionReady) {
         this.sessionReady = true;
         this.sendSessionUpdate();
+      }
+      
+      // Manejar function calls
+      if (event.type === 'response.function_call_arguments.done') {
+        await this.handleFunctionCall(event);
+        return;
       }
       
       if (this.clientWs?.readyState === WebSocket.OPEN) {
@@ -60,6 +69,8 @@ export class RealtimeService {
   }
 
   private sendSessionUpdate() {
+    const tools = this.mcpService?.getTools() || [];
+    
     const event = {
       type: 'session.update',
       session: {
@@ -74,10 +85,43 @@ export class RealtimeService {
           threshold: 0.5,
           prefix_padding_ms: 300,
           silence_duration_ms: 500
-        }
+        },
+        tools: tools,
+        tool_choice: 'auto'
       }
     };
 
     this.openaiWs?.send(JSON.stringify(event));
+    console.log(`🛠️  MCP Tools configurados: ${tools.length}`);
+  }
+
+  private async handleFunctionCall(event: any) {
+    if (!this.mcpService) return;
+    
+    const { item_id, call_id, name, arguments: argsStr } = event;
+    console.log(`🔧 Function call: ${name}`);
+    
+    try {
+      const args = JSON.parse(argsStr);
+      const result = await this.mcpService.executeTool(name, args);
+      
+      // Enviar resultado a OpenAI
+      const outputEvent = {
+        type: 'conversation.item.create',
+        item: {
+          type: 'function_call_output',
+          call_id: call_id,
+          output: JSON.stringify({ result: result || 'Error ejecutando herramienta' })
+        }
+      };
+      
+      this.openaiWs?.send(JSON.stringify(outputEvent));
+      
+      // Crear respuesta
+      this.openaiWs?.send(JSON.stringify({ type: 'response.create' }));
+      
+    } catch (error) {
+      console.error('❌ Error en function call:', error);
+    }
   }
 }

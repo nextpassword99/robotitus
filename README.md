@@ -1,16 +1,13 @@
-# SENATI Assistant API - Node.js
+# SENATI Assistant - Realtime Voice AI
 
-Sistema de asistencia conversacional para SENATI con RAG (Retrieval-Augmented Generation) usando ChromaDB y soporte MCP multi-servidor.
+Sistema de asistencia conversacional en tiempo real para SENATI usando OpenAI Realtime API con WebRTC y soporte MCP.
 
 ## Características
 
-- 🎤 **Reconocimiento de voz** con Whisper
-- 🔊 **Síntesis de voz** con OpenAI TTS
-- 🎙️ **Grabación de audio** en el navegador
-- 🔄 **Flujo automático**: Grabación → Transcripción → LLM → Respuesta → Audio
-- 🤖 **LLM** con GPT-4o-mini
-- 📚 **RAG** con ChromaDB para contexto institucional (opcional)
-- 🔌 **MCP Multi-Servidor** (opcional)
+- 🎙️ **Conversación en tiempo real** con OpenAI Realtime API
+- 🔊 **Audio bidireccional** con WebRTC (baja latencia)
+- 🤖 **GPT-4o Realtime** con detección de voz automática (VAD)
+- 🔌 **MCP Multi-Servidor** para herramientas externas (opcional)
 - ⚙️ **Configurable** desde .env
 - 🏗️ **Clean Architecture** con TypeScript
 
@@ -27,7 +24,6 @@ npm install
 
 ```env
 OPENAI_API_KEY=tu_api_key_aqui
-USE_RAG=false
 USE_MCP=false
 ```
 
@@ -41,8 +37,6 @@ npm run dev
 
 Luego abre tu navegador en: **http://localhost:8000**
 
-Luego abre tu navegador en: **http://localhost:8000**
-
 ### Iniciar servidor (producción)
 
 ```bash
@@ -50,21 +44,66 @@ npm run build
 npm start
 ```
 
-### Endpoints
+### Interfaz Web
 
-#### POST /api/process-audio
-Procesa audio con Whisper y genera respuesta
-```bash
-curl -X POST -F "audio=@audio.wav" http://localhost:8000/api/process-audio
+Abre http://localhost:8000 en tu navegador para:
+1. Presionar el micrófono para conectar
+2. Hablar naturalmente
+3. El sistema detecta automáticamente cuando hablas (VAD)
+4. Recibe respuestas en tiempo real con voz y texto
+
+**Flujo automático:**
+1. 🎙️ Usuario presiona micrófono
+2. 🔗 Conexión WebRTC con OpenAI
+3. 🗣️ Usuario habla (detección automática)
+4. 🤖 GPT-4o responde en tiempo real
+5. 💬 Transcripción en pantalla + audio
+
+## Arquitectura
+
+```
+src/
+├── config/
+│   ├── env.ts              # Configuración con Zod
+│   └── mcpRegistry.ts      # Registro MCP
+├── controllers/
+│   └── chat.controller.ts  # Configuración API
+├── services/
+│   ├── realtime.service.ts # Realtime API + MCP
+│   └── mcp.service.ts      # MCP Client
+├── routes/
+│   └── index.ts            # Rutas Express
+├── middleware/
+│   └── errorHandler.ts     # Manejo de errores
+├── app.ts                  # Express app
+└── server.ts               # Entry point + WebSocket
 ```
 
-#### POST /api/chat
-Chat directo sin audio
-```bash
-curl -X POST http://localhost:8000/api/chat \
-  -H "Content-Type: application/json" \
-  -d "{\"text\": \"¿Qué carreras ofrece SENATI?\"}"
-```
+## Tecnologías
+
+- **Express.js** + TypeScript
+- **OpenAI Realtime API** (WebRTC)
+- **WebSocket** (para proxy opcional)
+- **MCP SDK** (@modelcontextprotocol/sdk) (opcional)
+- **Zod** (validación)
+
+## MCP (Model Context Protocol)
+
+El sistema soporta herramientas MCP que se integran automáticamente con el Realtime API:
+
+1. Configura servidores MCP en `data/mcp/servers.json`
+2. Habilita MCP con `USE_MCP=true` en `.env`
+3. Las herramientas se registran automáticamente en la sesión
+4. El modelo puede llamar herramientas durante la conversación
+
+## Notas
+
+- **WebRTC**: Conexión directa cliente → OpenAI (baja latencia)
+- **VAD**: Detección automática de voz (no necesitas presionar para hablar)
+- **MCP**: Opcional, requiere servidores configurados
+- **HTTPS**: Requerido en producción para WebRTC (dev server funciona con HTTP)
+
+## Endpoints
 
 #### GET /api/config
 Configuración del sistema
@@ -77,70 +116,3 @@ Health check
 ```bash
 curl http://localhost:8000/health
 ```
-
-#### Interfaz Web
-Abre http://localhost:8000 en tu navegador para:
-1. Presionar el micrófono para grabar
-2. Hablar tu pregunta
-3. Presionar de nuevo para detener
-4. El sistema transcribe y genera respuesta
-
-**Flujo automático:**
-1. 🎙️ Usuario presiona micrófono y habla
-2. 📤 Audio se envía al servidor
-3. 🔄 Transcribe con Whisper
-4. 🤖 Genera respuesta con GPT-4o-mini
-5. 💬 Muestra resultado en pantalla
-
-## Arquitectura
-
-```
-src/
-├── config/
-│   ├── env.ts              # Configuración con Zod
-│   └── mcpRegistry.ts      # Registro MCP
-├── controllers/
-│   ├── audio.controller.ts # Procesar audio
-│   └── chat.controller.ts  # Chat y configuración
-├── services/
-│   ├── openai.service.ts   # Whisper
-│   ├── llm.service.ts      # GPT-4o-mini + RAG
-│   ├── vectorStore.service.ts  # ChromaDB
-│   └── mcp.service.ts      # MCP Client
-├── routes/
-│   └── index.ts            # Rutas Express
-├── middleware/
-│   └── errorHandler.ts     # Manejo de errores
-├── scripts/
-│   └── loadKnowledgeBase.ts
-├── app.ts                  # Express app
-└── server.ts               # Entry point
-```
-
-## Tecnologías
-
-- **Express.js** + TypeScript
-- **OpenAI SDK** (Whisper + GPT-4o-mini)
-- **ChromaDB** + LangChain.js (opcional)
-- **MCP SDK** (@modelcontextprotocol/sdk) (opcional)
-- **Zod** (validación)
-- **Multer** (upload de archivos)
-
-## Mapeo Python → Node.js
-
-| Python | Node.js |
-|--------|---------|
-| FastAPI | Express.js |
-| Uvicorn | Node.js HTTP |
-| Pydantic Settings | Zod |
-| openai (Python) | openai (Node.js) |
-| chromadb (Python) | chromadb (Node.js) |
-| langchain | @langchain/openai + @langchain/community |
-| mcp (Python) | @modelcontextprotocol/sdk |
-| python-multipart | multer |
-
-## Notas
-
-- **RAG**: Requiere ChromaDB corriendo localmente o configurar correctamente el path
-- **MCP**: Requiere servidores MCP configurados en `data/mcp/servers.json`
-- Por defecto, RAG y MCP están deshabilitados para facilitar el inicio rápido

@@ -2,20 +2,21 @@ import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import app from './app.js';
 import { env } from './config/env.js';
-import { llmService } from './controllers/audio.controller.js';
 import { RealtimeService } from './services/realtime.service.js';
+import { MCPService } from './services/mcp.service.js';
 
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/realtime' });
+const mcpService = env.USE_MCP ? new MCPService() : null;
 
 wss.on('connection', (ws) => {
   console.log('🔌 Cliente conectado a Realtime');
   const realtimeService = new RealtimeService();
-  realtimeService.connect(ws);
+  realtimeService.connect(ws, mcpService);
 });
 
 async function startServer() {
-  if (llmService.mcpService) await llmService.mcpService.connectAll();
+  if (mcpService) await mcpService.connectAll();
   server.listen(env.PORT, () => {
     console.log(`🚀 ${env.APP_NAME} corriendo en http://${env.HOST}:${env.PORT}`);
     console.log(`🎙️ Realtime WebSocket en ws://${env.HOST}:${env.PORT}/realtime`);
@@ -23,7 +24,7 @@ async function startServer() {
 }
 
 async function shutdown() {
-  if (llmService.mcpService) await llmService.mcpService.shutdown();
+  if (mcpService) await mcpService.shutdown();
 }
 
 startServer().catch(console.error);
