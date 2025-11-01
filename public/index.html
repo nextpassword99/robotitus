@@ -10,7 +10,7 @@
   <div class="container mx-auto px-4 py-8 max-w-4xl">
     <header class="text-center mb-12">
       <h1 class="text-5xl font-bold text-indigo-900 mb-2">🎤 SENATI Assistant</h1>
-      <p class="text-gray-600">Asistente virtual con detección de voz</p>
+      <p class="text-gray-600">Conversaciones en tiempo real con IA</p>
     </header>
 
     <div class="bg-white rounded-2xl shadow-2xl p-8 mb-6">
@@ -32,14 +32,7 @@
         </span>
       </div>
 
-      <div id="conversation" class="space-y-4 max-h-96 overflow-y-auto">
-        <div class="text-center text-gray-400 py-8">
-          <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-          </svg>
-          <p>Presiona el micrófono para comenzar</p>
-        </div>
-      </div>
+      <div id="conversation" class="space-y-4 max-h-96 overflow-y-auto"></div>
     </div>
 
     <div class="bg-white rounded-xl shadow-lg p-6">
@@ -47,21 +40,20 @@
       <ol class="space-y-2 text-sm text-gray-600">
         <li class="flex items-start">
           <span class="font-bold text-indigo-600 mr-2">1.</span>
-          <span>Presiona el micrófono para iniciar la grabación</span>
+          <span>Presiona el micrófono para activar</span>
         </li>
         <li class="flex items-start">
           <span class="font-bold text-indigo-600 mr-2">2.</span>
-          <span>Habla tu pregunta claramente</span>
+          <span>Habla naturalmente - el sistema detecta automáticamente cuando hablas</span>
         </li>
         <li class="flex items-start">
           <span class="font-bold text-indigo-600 mr-2">3.</span>
-          <span>El sistema transcribirá y responderá automáticamente</span>
+          <span>Recibe respuestas en tiempo real con voz y texto</span>
         </li>
       </ol>
     </div>
   </div>
 
-  <script src="/audio.js"></script>
-  <script src="/app.js"></script>
+  <script src="/realtime.js"></script>
 </body>
 </html>
