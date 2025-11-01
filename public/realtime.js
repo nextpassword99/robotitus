@@ -115,6 +115,9 @@ function sendSessionUpdate() {
   dc.send(JSON.stringify(event));
 }
 
+let currentUserMessage = '';
+let currentAssistantMessage = '';
+
 function handleServerEvent(event) {
   console.log('📨', event.type);
 
@@ -126,6 +129,7 @@ function handleServerEvent(event) {
 
     case 'input_audio_buffer.speech_started':
       updateStatus('Escuchando...', 'listening');
+      currentUserMessage = '';
       break;
 
     case 'input_audio_buffer.speech_stopped':
@@ -138,12 +142,27 @@ function handleServerEvent(event) {
       }
       break;
 
+    case 'response.output_item.added':
+      currentAssistantMessage = '';
+      lastAssistantMessage = null;
+      break;
+
     case 'response.audio_transcript.delta':
-      addMessage('assistant', event.delta, true);
+      if (event.delta) {
+        currentAssistantMessage += event.delta;
+        addMessage('assistant', event.delta, true);
+      }
+      break;
+
+    case 'response.audio_transcript.done':
+      if (currentAssistantMessage) {
+        lastAssistantMessage = null;
+      }
       break;
 
     case 'response.done':
       updateStatus('Listo - Habla cuando quieras', 'success');
+      lastAssistantMessage = null;
       break;
 
     case 'error':
@@ -198,6 +217,8 @@ function updateStatus(text, type) {
 let lastAssistantMessage = null;
 
 function addMessage(role, text, isPartial = false) {
+  if (!text || text.trim() === '') return;
+  
   const conversation = document.getElementById('conversation');
   
   if (role === 'assistant' && isPartial) {
@@ -214,30 +235,27 @@ function addMessage(role, text, isPartial = false) {
       `;
       conversation.appendChild(lastAssistantMessage);
     }
-    lastAssistantMessage.querySelector('p').textContent += text;
-  } else {
-    lastAssistantMessage = null;
+    const p = lastAssistantMessage.querySelector('p');
+    p.textContent += text;
+  } else if (role === 'user') {
     const messageDiv = document.createElement('div');
-    messageDiv.className = role === 'user' ? 'flex items-start space-x-3 justify-end' : 'flex items-start space-x-3';
-    messageDiv.innerHTML = role === 'user' 
-      ? `
-        <div class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-none p-4 max-w-md ml-auto">
-          <p>${text}</p>
-        </div>
-        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-          <span class="text-white text-sm">👤</span>
-        </div>
-      `
-      : `
-        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-          <span class="text-white text-sm">🤖</span>
-        </div>
-        <div class="flex-1 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl rounded-tl-none p-4">
-          <p class="text-gray-800">${text}</p>
-        </div>
-      `;
+    messageDiv.className = 'flex items-start space-x-3 justify-end mb-4';
+    messageDiv.innerHTML = `
+      <div class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-none p-4 max-w-md ml-auto">
+        <p>${escapeHtml(text)}</p>
+      </div>
+      <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+        <span class="text-white text-sm">👤</span>
+      </div>
+    `;
     conversation.appendChild(messageDiv);
   }
   
   conversation.scrollTop = conversation.scrollHeight;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
