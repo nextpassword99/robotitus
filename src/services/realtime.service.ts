@@ -4,6 +4,7 @@ import { env } from '../config/env.js';
 export class RealtimeService {
   private openaiWs: WebSocket | null = null;
   private clientWs: WebSocket | null = null;
+  private sessionReady = false;
 
   async connect(clientWs: WebSocket) {
     this.clientWs = clientWs;
@@ -18,12 +19,20 @@ export class RealtimeService {
 
     this.openaiWs.on('open', () => {
       console.log('✅ Conectado a OpenAI Realtime API');
-      this.sendSessionUpdate();
     });
 
     this.openaiWs.on('message', (data) => {
+      const message = data.toString();
+      const event = JSON.parse(message);
+      console.log('📩 OpenAI:', event.type);
+      
+      if (event.type === 'session.created' && !this.sessionReady) {
+        this.sessionReady = true;
+        this.sendSessionUpdate();
+      }
+      
       if (this.clientWs?.readyState === WebSocket.OPEN) {
-        this.clientWs.send(data);
+        this.clientWs.send(message);
       }
     });
 
@@ -38,8 +47,10 @@ export class RealtimeService {
     });
 
     clientWs.on('message', (data) => {
+      const message = data.toString();
+      console.log('📨 Cliente:', message.substring(0, 100));
       if (this.openaiWs?.readyState === WebSocket.OPEN) {
-        this.openaiWs.send(data);
+        this.openaiWs.send(message);
       }
     });
 
@@ -66,6 +77,8 @@ export class RealtimeService {
       }
     };
 
-    this.openaiWs?.send(JSON.stringify(event));
+    const payload = JSON.stringify(event);
+    console.log('📤 Enviando session.update:', payload.substring(0, 150));
+    this.openaiWs?.send(payload);
   }
 }
