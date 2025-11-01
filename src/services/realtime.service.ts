@@ -1,6 +1,7 @@
 import WebSocket from 'ws';
 import { env } from '../config/env.js';
 import { MCPService } from './mcp.service.js';
+import { RealtimeConfig } from '../config/realtime.config.js';
 
 export class RealtimeService {
   private openaiWs: WebSocket | null = null;
@@ -12,7 +13,7 @@ export class RealtimeService {
     this.clientWs = clientWs;
     this.mcpService = mcpService;
     
-    const url = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17';
+    const url = `wss://api.openai.com/v1/realtime?model=${RealtimeConfig.model.name}`;
     this.openaiWs = new WebSocket(url, {
       headers: {
         'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
@@ -27,7 +28,10 @@ export class RealtimeService {
     this.openaiWs.on('message', async (data) => {
       const message = data.toString();
       const event = JSON.parse(message);
-      console.log('📩 OpenAI:', event.type);
+      
+      if (RealtimeConfig.logging.logEvents) {
+        console.log('📩 OpenAI:', event.type);
+      }
       
       if (event.type === 'session.created' && !this.sessionReady) {
         this.sessionReady = true;
@@ -74,32 +78,40 @@ export class RealtimeService {
     const event = {
       type: 'session.update',
       session: {
-        modalities: ['text', 'audio'],
-        instructions: 'Eres un asistente amigable de SENATI en Perú. Responde brevemente en español sobre carreras, admisión, sedes y costos.',
-        voice: 'alloy',
-        input_audio_format: 'pcm16',
-        output_audio_format: 'pcm16',
-        input_audio_transcription: { model: 'whisper-1' },
+        modalities: RealtimeConfig.model.modalities,
+        instructions: RealtimeConfig.systemPrompt.build(),
+        voice: RealtimeConfig.audio.voice,
+        input_audio_format: RealtimeConfig.audio.inputFormat,
+        output_audio_format: RealtimeConfig.audio.outputFormat,
+        input_audio_transcription: RealtimeConfig.transcription.enabled 
+          ? { model: RealtimeConfig.transcription.model } 
+          : undefined,
         turn_detection: {
-          type: 'server_vad',
-          threshold: 0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 500
+          type: RealtimeConfig.vad.type,
+          threshold: RealtimeConfig.vad.threshold,
+          prefix_padding_ms: RealtimeConfig.vad.prefixPaddingMs,
+          silence_duration_ms: RealtimeConfig.vad.silenceDurationMs
         },
         tools: tools,
-        tool_choice: 'auto'
+        tool_choice: RealtimeConfig.tools.choice
       }
     };
 
+    if (RealtimeConfig.logging.enabled) {
+      console.log(`🛠️  MCP Tools configurados: ${tools.length}`);
+    }
+    
     this.openaiWs?.send(JSON.stringify(event));
-    console.log(`🛠️  MCP Tools configurados: ${tools.length}`);
   }
 
   private async handleFunctionCall(event: any) {
     if (!this.mcpService) return;
     
     const { item_id, call_id, name, arguments: argsStr } = event;
-    console.log(`🔧 Function call: ${name}`);
+    
+    if (RealtimeConfig.logging.logFunctionCalls) {
+      console.log(`🔧 Function call: ${name}`);
+    }
     
     try {
       const args = JSON.parse(argsStr);

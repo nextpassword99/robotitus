@@ -1,51 +1,67 @@
+const ClientConfig = {
+  statusMessages: {
+    connecting: "Conectando con el asistente...",
+    connected: "Conectado - Habla cuando quieras",
+    listening: "Escuchando...",
+    processing: "Procesando...",
+    error: "Error de conexión",
+    disconnected: "Desconectado",
+    microphoneRequest: "Solicitando micrófono...",
+    webrtcSetup: "Configurando conexión...",
+    ready: "Listo - Habla cuando quieras",
+  },
+  audio: {
+    channelCount: 1,
+    sampleRate: 24000,
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+  },
+  realtime: {
+    model: "gpt-4o-realtime-preview-2024-12-17",
+    apiUrl: "https://api.openai.com/v1/realtime",
+  },
+};
+
 let pc = null;
 let dc = null;
 let micStream = null;
 let isConnected = false;
 
-const API_KEY = 'OPENAI_API_KEY'; // Se obtiene del servidor
-
 async function getApiKey() {
-  const res = await fetch('/api/config');
+  const res = await fetch("/api/config");
   const config = await res.json();
   return config.openaiApiKey;
 }
 
 async function connectRealtime() {
   try {
-    updateStatus('Solicitando micrófono...', 'processing');
-    
+    updateStatus(ClientConfig.statusMessages.microphoneRequest, "processing");
+
     const apiKey = await getApiKey();
-    
+
     // 1. Capturar micrófono
-    micStream = await navigator.mediaDevices.getUserMedia({ 
-      audio: {
-        channelCount: 1,
-        sampleRate: 24000,
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: ClientConfig.audio,
     });
 
-    updateStatus('Creando sesión WebRTC...', 'processing');
+    updateStatus(ClientConfig.statusMessages.webrtcSetup, "processing");
 
     // 2. Crear peer connection
     pc = new RTCPeerConnection();
 
     // 3. Audio remoto (respuesta del modelo)
-    const audioEl = document.createElement('audio');
+    const audioEl = document.createElement("audio");
     audioEl.autoplay = true;
     pc.ontrack = (e) => {
       audioEl.srcObject = e.streams[0];
     };
 
     // 4. Data channel para eventos
-    dc = pc.createDataChannel('oai-events');
-    
+    dc = pc.createDataChannel("oai-events");
+
     dc.onopen = () => {
-      console.log('✅ Data channel abierto');
-      sendSessionUpdate();
+      console.log("✅ Data channel abierto");
     };
 
     dc.onmessage = (e) => {
@@ -54,23 +70,26 @@ async function connectRealtime() {
     };
 
     // 5. Añadir pistas locales
-    micStream.getTracks().forEach(track => pc.addTrack(track, micStream));
+    micStream.getTracks().forEach((track) => pc.addTrack(track, micStream));
 
     // 6. Crear oferta
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
-    updateStatus('Conectando con GPT-4o...', 'processing');
+    updateStatus(ClientConfig.statusMessages.connecting, "processing");
 
     // 7. Enviar oferta a OpenAI
-    const response = await fetch('https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/sdp'
-      },
-      body: offer.sdp
-    });
+    const response = await fetch(
+      `${ClientConfig.realtime.apiUrl}?model=${ClientConfig.realtime.model}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/sdp",
+        },
+        body: offer.sdp,
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`Error ${response.status}: ${await response.text()}`);
@@ -78,103 +97,88 @@ async function connectRealtime() {
 
     // 8. Establecer respuesta remota
     const answer = {
-      type: 'answer',
-      sdp: await response.text()
+      type: "answer",
+      sdp: await response.text(),
     };
     await pc.setRemoteDescription(answer);
 
     isConnected = true;
-    updateStatus('✅ Conectado - Habla cuando quieras', 'success');
-
+    updateStatus(ClientConfig.statusMessages.connected, "success");
   } catch (error) {
-    console.error('❌ Error:', error);
-    updateStatus('Error: ' + error.message, 'error');
+    console.error("❌ Error:", error);
+    updateStatus(
+      `${ClientConfig.statusMessages.error}: ${error.message}`,
+      "error"
+    );
     cleanup();
   }
 }
 
-function sendSessionUpdate() {
-  const event = {
-    type: 'session.update',
-    session: {
-      modalities: ['text', 'audio'],
-      instructions: 'Eres un asistente amigable de SENATI en Perú. Responde brevemente en español sobre carreras, admisión, sedes y costos.',
-      voice: 'alloy',
-      input_audio_format: 'pcm16',
-      output_audio_format: 'pcm16',
-      input_audio_transcription: { model: 'whisper-1' },
-      turn_detection: {
-        type: 'server_vad',
-        threshold: 0.5,
-        prefix_padding_ms: 300,
-        silence_duration_ms: 500
-      }
-    }
-  };
-  
-  dc.send(JSON.stringify(event));
-}
-
-let currentUserMessage = '';
-let currentAssistantMessage = '';
+let currentUserMessage = "";
+let currentAssistantMessage = "";
 
 function handleServerEvent(event) {
-  console.log('📨', event.type);
+  console.log("📨", event.type);
 
   switch (event.type) {
-    case 'session.created':
-    case 'session.updated':
-      updateStatus('Listo - Habla cuando quieras', 'success');
+    case "session.created":
+    case "session.updated":
+      updateStatus(ClientConfig.statusMessages.ready, "success");
       break;
 
-    case 'input_audio_buffer.speech_started':
-      updateStatus('Escuchando...', 'listening');
-      currentUserMessage = '';
+    case "input_audio_buffer.speech_started":
+      updateStatus(ClientConfig.statusMessages.listening, "listening");
+      currentUserMessage = "";
       break;
 
-    case 'input_audio_buffer.speech_stopped':
-      updateStatus('Procesando...', 'processing');
+    case "input_audio_buffer.speech_stopped":
+      updateStatus(ClientConfig.statusMessages.processing, "processing");
       break;
 
-    case 'conversation.item.input_audio_transcription.completed':
+    case "conversation.item.input_audio_transcription.completed":
       if (event.transcript) {
-        addMessage('user', event.transcript);
+        addMessage("user", event.transcript);
       }
       break;
 
-    case 'response.output_item.added':
-      currentAssistantMessage = '';
+    case "response.output_item.added":
+      currentAssistantMessage = "";
       lastAssistantMessage = null;
       break;
 
-    case 'response.audio_transcript.delta':
+    case "response.audio_transcript.delta":
       if (event.delta) {
         currentAssistantMessage += event.delta;
-        addMessage('assistant', event.delta, true);
+        addMessage("assistant", event.delta, true);
       }
       break;
 
-    case 'response.audio_transcript.done':
+    case "response.audio_transcript.done":
       if (currentAssistantMessage) {
         lastAssistantMessage = null;
       }
       break;
 
-    case 'response.done':
-      updateStatus('Listo - Habla cuando quieras', 'success');
+    case "response.done":
+      updateStatus(ClientConfig.statusMessages.ready, "success");
       lastAssistantMessage = null;
       break;
 
-    case 'error':
-      console.error('Error:', event.error);
-      updateStatus('Error: ' + (event.error?.message || 'Desconocido'), 'error');
+    case "error":
+      console.error("Error:", event.error);
+      updateStatus(
+        `${ClientConfig.statusMessages.error}: ${
+          event.error?.message || "Desconocido"
+        }`,
+        "error"
+      );
       break;
   }
 }
 
 function cleanup() {
   if (micStream) {
-    micStream.getTracks().forEach(track => track.stop());
+    micStream.getTracks().forEach((track) => track.stop());
     micStream = null;
   }
   if (pc) {
@@ -188,26 +192,32 @@ function cleanup() {
 async function toggleRecording() {
   if (!isConnected) {
     await connectRealtime();
-    document.getElementById('micCircle').classList.add('scale-110', 'shadow-2xl');
-    document.getElementById('pulse').classList.remove('hidden');
+    document
+      .getElementById("micCircle")
+      .classList.add("scale-110", "shadow-2xl");
+    document.getElementById("pulse").classList.remove("hidden");
   } else {
     cleanup();
-    updateStatus('Desconectado', 'error');
-    document.getElementById('micCircle').classList.remove('scale-110', 'shadow-2xl');
-    document.getElementById('pulse').classList.add('hidden');
+    updateStatus(ClientConfig.statusMessages.disconnected, "error");
+    document
+      .getElementById("micCircle")
+      .classList.remove("scale-110", "shadow-2xl");
+    document.getElementById("pulse").classList.add("hidden");
   }
 }
 
 function updateStatus(text, type) {
-  const status = document.getElementById('status');
+  const status = document.getElementById("status");
   const colors = {
-    success: 'bg-green-100 text-green-800',
-    listening: 'bg-blue-100 text-blue-800',
-    processing: 'bg-yellow-100 text-yellow-800',
-    error: 'bg-red-100 text-red-800'
+    success: "bg-green-100 text-green-800",
+    listening: "bg-blue-100 text-blue-800",
+    processing: "bg-yellow-100 text-yellow-800",
+    error: "bg-red-100 text-red-800",
   };
   status.innerHTML = `
-    <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${colors[type] || colors.success}">
+    <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
+      colors[type] || colors.success
+    }">
       <span class="w-2 h-2 bg-current rounded-full mr-2 animate-pulse"></span>
       ${text}
     </span>
@@ -217,14 +227,14 @@ function updateStatus(text, type) {
 let lastAssistantMessage = null;
 
 function addMessage(role, text, isPartial = false) {
-  if (!text || text.trim() === '') return;
-  
-  const conversation = document.getElementById('conversation');
-  
-  if (role === 'assistant' && isPartial) {
+  if (!text || text.trim() === "") return;
+
+  const conversation = document.getElementById("conversation");
+
+  if (role === "assistant" && isPartial) {
     if (!lastAssistantMessage) {
-      lastAssistantMessage = document.createElement('div');
-      lastAssistantMessage.className = 'flex items-start space-x-3';
+      lastAssistantMessage = document.createElement("div");
+      lastAssistantMessage.className = "flex items-start space-x-3";
       lastAssistantMessage.innerHTML = `
         <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
           <span class="text-white text-sm">🤖</span>
@@ -235,11 +245,11 @@ function addMessage(role, text, isPartial = false) {
       `;
       conversation.appendChild(lastAssistantMessage);
     }
-    const p = lastAssistantMessage.querySelector('p');
+    const p = lastAssistantMessage.querySelector("p");
     p.textContent += text;
-  } else if (role === 'user') {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'flex items-start space-x-3 justify-end mb-4';
+  } else if (role === "user") {
+    const messageDiv = document.createElement("div");
+    messageDiv.className = "flex items-start space-x-3 justify-end mb-4";
     messageDiv.innerHTML = `
       <div class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-none p-4 max-w-md ml-auto">
         <p>${escapeHtml(text)}</p>
@@ -250,12 +260,12 @@ function addMessage(role, text, isPartial = false) {
     `;
     conversation.appendChild(messageDiv);
   }
-  
+
   conversation.scrollTop = conversation.scrollHeight;
 }
 
 function escapeHtml(text) {
-  const div = document.createElement('div');
+  const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
 }
