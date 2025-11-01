@@ -51,6 +51,12 @@ function handleServerEvent(event) {
       updateStatus('Procesando...', 'processing');
       break;
 
+    case 'conversation.item.input_audio_transcription.completed':
+      if (event.transcript) {
+        addMessage('user', event.transcript);
+      }
+      break;
+
     case 'response.audio_transcript.delta':
       addMessage('assistant', event.delta, true);
       break;
@@ -121,6 +127,7 @@ async function startMicrophone() {
   const source = audioContext.createMediaStreamSource(mediaStream);
   const processor = audioContext.createScriptProcessor(2048, 1, 1);
   
+  let chunkCount = 0;
   processor.onaudioprocess = (e) => {
     if (ws?.readyState === WebSocket.OPEN) {
       const float32 = e.inputBuffer.getChannelData(0);
@@ -134,6 +141,10 @@ async function startMicrophone() {
         type: 'input_audio_buffer.append',
         audio: base64
       }));
+      chunkCount++;
+      if (chunkCount % 50 === 0) {
+        console.log(`📤 Enviados ${chunkCount} chunks de audio`);
+      }
     }
   };
   

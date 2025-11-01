@@ -63,22 +63,32 @@ export class RealtimeService {
     const event = {
       type: 'session.update',
       session: {
-        modalities: ['text', 'audio'],
-        instructions: 'Eres un asistente amigable de SENATI en Perú. Responde brevemente en español sobre carreras, admisión, sedes y costos.',
-        voice: 'alloy',
-        input_audio_format: 'pcm16',
-        output_audio_format: 'pcm16',
-        turn_detection: {
-          type: 'server_vad',
-          threshold: 0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 500
-        }
+        type: 'realtime',
+        model: 'gpt-4o-realtime-preview-2024-12-17',
+        output_modalities: ['audio', 'text'],
+        audio: {
+          input: {
+            format: {
+              type: 'audio/pcm',
+              rate: 24000
+            },
+            turn_detection: {
+              type: 'semantic_vad'
+            }
+          },
+          output: {
+            format: {
+              type: 'audio/pcm'
+            },
+            voice: 'alloy'
+          }
+        },
+        instructions: 'Eres un asistente amigable de SENATI en Perú. Responde brevemente en español sobre carreras, admisión, sedes y costos.'
       }
     };
 
     const payload = JSON.stringify(event);
-    console.log('📤 Enviando session.update:', payload.substring(0, 150));
+    console.log('📤 Enviando session.update');
     this.openaiWs?.send(payload);
   }
 }
