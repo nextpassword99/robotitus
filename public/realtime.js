@@ -2,6 +2,8 @@ let ws = null;
 let audioContext = null;
 let audioQueue = [];
 let isPlaying = false;
+let mediaStream = null;
+let audioWorklet = null;
 
 async function connectRealtime() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -64,8 +66,8 @@ function handleServerEvent(event) {
       break;
 
     case 'error':
-      console.error('Error:', event);
-      updateStatus('Error: ' + event.error.message, 'error');
+      console.error('Error:', event.error);
+      updateStatus('Error: ' + (event.error?.message || 'Desconocido'), 'error');
       break;
   }
 }
@@ -106,36 +108,39 @@ async function playNextAudio() {
 }
 
 async function startMicrophone() {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+  mediaStream = await navigator.mediaDevices.getUserMedia({ 
+    audio: {
+      channelCount: 1,
+      sampleRate: 24000,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    }
+  });
   
-  mediaRecorder.ondataavailable = async (event) => {
-    if (event.data.size > 0 && ws?.readyState === WebSocket.OPEN) {
-      const arrayBuffer = await event.data.arrayBuffer();
-      const audioContext = new AudioContext({ sampleRate: 24000 });
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const pcm16 = convertToPCM16(audioBuffer);
+  const source = audioContext.createMediaStreamSource(mediaStream);
+  const processor = audioContext.createScriptProcessor(2048, 1, 1);
+  
+  processor.onaudioprocess = (e) => {
+    if (ws?.readyState === WebSocket.OPEN) {
+      const float32 = e.inputBuffer.getChannelData(0);
+      const pcm16 = new Int16Array(float32.length);
+      for (let i = 0; i < float32.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32[i]));
+        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
       const base64 = btoa(String.fromCharCode(...new Uint8Array(pcm16.buffer)));
-      
       ws.send(JSON.stringify({
         type: 'input_audio_buffer.append',
         audio: base64
       }));
     }
   };
-
-  mediaRecorder.start(100);
-  return { mediaRecorder, stream };
-}
-
-function convertToPCM16(audioBuffer) {
-  const float32 = audioBuffer.getChannelData(0);
-  const pcm16 = new Int16Array(float32.length);
-  for (let i = 0; i < float32.length; i++) {
-    const s = Math.max(-1, Math.min(1, float32[i]));
-    pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-  }
-  return pcm16;
+  
+  source.connect(processor);
+  processor.connect(audioContext.destination);
+  
+  return { processor, source };
 }
 
 let currentRecording = null;
@@ -143,7 +148,7 @@ let currentRecording = null;
 async function toggleRecording() {
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     await connectRealtime();
-    return;
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
   if (!currentRecording) {
@@ -151,9 +156,11 @@ async function toggleRecording() {
     document.getElementById('micCircle').classList.add('scale-110', 'shadow-2xl');
     document.getElementById('pulse').classList.remove('hidden');
   } else {
-    currentRecording.mediaRecorder.stop();
-    currentRecording.stream.getTracks().forEach(track => track.stop());
+    currentRecording.processor.disconnect();
+    currentRecording.source.disconnect();
+    mediaStream.getTracks().forEach(track => track.stop());
     currentRecording = null;
+    mediaStream = null;
     document.getElementById('micCircle').classList.remove('scale-110', 'shadow-2xl');
     document.getElementById('pulse').classList.add('hidden');
   }

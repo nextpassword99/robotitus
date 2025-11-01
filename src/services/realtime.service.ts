@@ -49,39 +49,14 @@ export class RealtimeService {
   }
 
   private sendSessionUpdate() {
-    const systemMessage = `Eres un asistente virtual cálido y amigable de SENATI (Servicio Nacional de Adiestramiento en Trabajo Industrial) en Perú.
-
-Tu personalidad:
-- Hablas con calidez y empatía, como un amigo cercano que genuinamente quiere ayudar
-- Eres tierno, acogedor y transmites confianza en cada respuesta
-- Usas un lenguaje cercano y natural, evitando ser demasiado formal
-- Muestras entusiasmo por ayudar y celebras los intereses del usuario
-
-Tu función es ayudar con información sobre:
-- Carreras técnicas y programas de formación
-- Proceso de admisión y matrícula
-- Sedes y horarios
-- Costos y becas
-- Certificaciones
-
-ESTILO DE RESPUESTA:
-- SÉ BREVE: Responde en 2-3 oraciones máximo
-- Ve directo al punto sin rodeos innecesarios
-- Usa un tono conversacional como si estuvieras hablando
-
-IMPORTANTE: SIEMPRE responde en español.`;
-
     const event = {
       type: 'session.update',
       session: {
         modalities: ['text', 'audio'],
-        instructions: systemMessage,
+        instructions: 'Eres un asistente amigable de SENATI en Perú. Responde brevemente en español sobre carreras, admisión, sedes y costos.',
         voice: 'alloy',
         input_audio_format: 'pcm16',
         output_audio_format: 'pcm16',
-        input_audio_transcription: {
-          model: 'whisper-1'
-        },
         turn_detection: {
           type: 'server_vad',
           threshold: 0.5,
