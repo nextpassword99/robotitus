@@ -1,37 +1,118 @@
-let ws = null;
-let audioContext = null;
-let audioQueue = [];
-let isPlaying = false;
-let mediaStream = null;
-let audioWorklet = null;
+let pc = null;
+let dc = null;
+let micStream = null;
+let isConnected = false;
+
+const API_KEY = 'OPENAI_API_KEY'; // Se obtiene del servidor
+
+async function getApiKey() {
+  const res = await fetch('/api/config');
+  const config = await res.json();
+  return config.openaiApiKey;
+}
 
 async function connectRealtime() {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/realtime`;
+  try {
+    updateStatus('Solicitando micrófono...', 'processing');
+    
+    const apiKey = await getApiKey();
+    
+    // 1. Capturar micrófono
+    micStream = await navigator.mediaDevices.getUserMedia({ 
+      audio: {
+        channelCount: 1,
+        sampleRate: 24000,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+
+    updateStatus('Creando sesión WebRTC...', 'processing');
+
+    // 2. Crear peer connection
+    pc = new RTCPeerConnection();
+
+    // 3. Audio remoto (respuesta del modelo)
+    const audioEl = document.createElement('audio');
+    audioEl.autoplay = true;
+    pc.ontrack = (e) => {
+      audioEl.srcObject = e.streams[0];
+    };
+
+    // 4. Data channel para eventos
+    dc = pc.createDataChannel('oai-events');
+    
+    dc.onopen = () => {
+      console.log('✅ Data channel abierto');
+      sendSessionUpdate();
+    };
+
+    dc.onmessage = (e) => {
+      const event = JSON.parse(e.data);
+      handleServerEvent(event);
+    };
+
+    // 5. Añadir pistas locales
+    micStream.getTracks().forEach(track => pc.addTrack(track, micStream));
+
+    // 6. Crear oferta
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    updateStatus('Conectando con GPT-4o...', 'processing');
+
+    // 7. Enviar oferta a OpenAI
+    const response = await fetch('https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/sdp'
+      },
+      body: offer.sdp
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${await response.text()}`);
+    }
+
+    // 8. Establecer respuesta remota
+    const answer = {
+      type: 'answer',
+      sdp: await response.text()
+    };
+    await pc.setRemoteDescription(answer);
+
+    isConnected = true;
+    updateStatus('✅ Conectado - Habla cuando quieras', 'success');
+
+  } catch (error) {
+    console.error('❌ Error:', error);
+    updateStatus('Error: ' + error.message, 'error');
+    cleanup();
+  }
+}
+
+function sendSessionUpdate() {
+  const event = {
+    type: 'session.update',
+    session: {
+      modalities: ['text', 'audio'],
+      instructions: 'Eres un asistente amigable de SENATI en Perú. Responde brevemente en español sobre carreras, admisión, sedes y costos.',
+      voice: 'alloy',
+      input_audio_format: 'pcm16',
+      output_audio_format: 'pcm16',
+      input_audio_transcription: { model: 'whisper-1' },
+      turn_detection: {
+        type: 'server_vad',
+        threshold: 0.5,
+        prefix_padding_ms: 300,
+        silence_duration_ms: 500
+      }
+    }
+  };
   
-  ws = new WebSocket(wsUrl);
-  audioContext = new AudioContext({ sampleRate: 24000 });
-
-  ws.onopen = () => {
-    console.log('✅ Conectado a Realtime');
-    updateStatus('Conectado - Habla cuando quieras', 'success');
-  };
-
-  ws.onmessage = async (event) => {
-    const data = typeof event.data === 'string' ? event.data : await event.data.text();
-    const serverEvent = JSON.parse(data);
-    handleServerEvent(serverEvent);
-  };
-
-  ws.onerror = (error) => {
-    console.error('❌ Error WebSocket:', error);
-    updateStatus('Error de conexión', 'error');
-  };
-
-  ws.onclose = () => {
-    console.log('🔌 Desconectado');
-    updateStatus('Desconectado', 'error');
-  };
+  dc.send(JSON.stringify(event));
 }
 
 function handleServerEvent(event) {
@@ -61,12 +142,6 @@ function handleServerEvent(event) {
       addMessage('assistant', event.delta, true);
       break;
 
-    case 'response.audio.delta':
-      if (event.delta) {
-        queueAudio(event.delta);
-      }
-      break;
-
     case 'response.done':
       updateStatus('Listo - Habla cuando quieras', 'success');
       break;
@@ -78,100 +153,27 @@ function handleServerEvent(event) {
   }
 }
 
-function queueAudio(base64Audio) {
-  const binaryString = atob(base64Audio);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+function cleanup() {
+  if (micStream) {
+    micStream.getTracks().forEach(track => track.stop());
+    micStream = null;
   }
-
-  const pcm16 = new Int16Array(bytes.buffer);
-  const float32 = new Float32Array(pcm16.length);
-  for (let i = 0; i < pcm16.length; i++) {
-    float32[i] = pcm16[i] / 32768.0;
+  if (pc) {
+    pc.close();
+    pc = null;
   }
-
-  audioQueue.push(float32);
-  if (!isPlaying) playNextAudio();
+  dc = null;
+  isConnected = false;
 }
-
-async function playNextAudio() {
-  if (audioQueue.length === 0) {
-    isPlaying = false;
-    return;
-  }
-
-  isPlaying = true;
-  const audioData = audioQueue.shift();
-  const audioBuffer = audioContext.createBuffer(1, audioData.length, 24000);
-  audioBuffer.getChannelData(0).set(audioData);
-
-  const source = audioContext.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(audioContext.destination);
-  source.onended = () => playNextAudio();
-  source.start();
-}
-
-async function startMicrophone() {
-  mediaStream = await navigator.mediaDevices.getUserMedia({ 
-    audio: {
-      channelCount: 1,
-      sampleRate: 24000,
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true
-    }
-  });
-  
-  const source = audioContext.createMediaStreamSource(mediaStream);
-  const processor = audioContext.createScriptProcessor(2048, 1, 1);
-  
-  let chunkCount = 0;
-  processor.onaudioprocess = (e) => {
-    if (ws?.readyState === WebSocket.OPEN) {
-      const float32 = e.inputBuffer.getChannelData(0);
-      const pcm16 = new Int16Array(float32.length);
-      for (let i = 0; i < float32.length; i++) {
-        const s = Math.max(-1, Math.min(1, float32[i]));
-        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-      }
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(pcm16.buffer)));
-      ws.send(JSON.stringify({
-        type: 'input_audio_buffer.append',
-        audio: base64
-      }));
-      chunkCount++;
-      if (chunkCount % 50 === 0) {
-        console.log(`📤 Enviados ${chunkCount} chunks de audio`);
-      }
-    }
-  };
-  
-  source.connect(processor);
-  processor.connect(audioContext.destination);
-  
-  return { processor, source };
-}
-
-let currentRecording = null;
 
 async function toggleRecording() {
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
+  if (!isConnected) {
     await connectRealtime();
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-
-  if (!currentRecording) {
-    currentRecording = await startMicrophone();
     document.getElementById('micCircle').classList.add('scale-110', 'shadow-2xl');
     document.getElementById('pulse').classList.remove('hidden');
   } else {
-    currentRecording.processor.disconnect();
-    currentRecording.source.disconnect();
-    mediaStream.getTracks().forEach(track => track.stop());
-    currentRecording = null;
-    mediaStream = null;
+    cleanup();
+    updateStatus('Desconectado', 'error');
     document.getElementById('micCircle').classList.remove('scale-110', 'shadow-2xl');
     document.getElementById('pulse').classList.add('hidden');
   }
@@ -239,5 +241,3 @@ function addMessage(role, text, isPartial = false) {
   
   conversation.scrollTop = conversation.scrollHeight;
 }
-
-connectRealtime();

@@ -37,7 +37,8 @@ export const getConfig = async (req: Request, res: Response) => {
     mcp_enabled: env.USE_MCP,
     llm_model: env.LLM_MODEL,
     embedding_model: env.EMBEDDING_MODEL,
-    collection_name: env.COLLECTION_NAME
+    collection_name: env.COLLECTION_NAME,
+    openaiApiKey: env.OPENAI_API_KEY
   });
 };
 
