@@ -16,7 +16,8 @@ async function connectRealtime() {
   };
 
   ws.onmessage = async (event) => {
-    const serverEvent = JSON.parse(event.data);
+    const data = typeof event.data === 'string' ? event.data : await event.data.text();
+    const serverEvent = JSON.parse(data);
     handleServerEvent(serverEvent);
   };
 
