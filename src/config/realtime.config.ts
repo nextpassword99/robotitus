@@ -65,7 +65,6 @@ export const RealtimeConfig = {
       "SÉ BREVE: Responde en 2-3 oraciones máximo",
       "Ve directo al punto sin rodeos innecesarios",
       "Usa un tono conversacional como si estuvieras hablando",
-      "SIEMPRE responde en español",
     ],
 
     /**
@@ -73,6 +72,10 @@ export const RealtimeConfig = {
      */
     build(): string {
       return `${this.role}
+
+      ## CRÍTICO: IDIOMA OBLIGATORIO
+      Responde ÚNICAMENTE en español. NUNCA uses inglés, eslovaco u otro idioma.
+      Si el usuario habla en otro idioma, responde en español de todas formas.
 
       ## Personalidad
       ${this.personality.map((p) => `- ${p}`).join("\n")}

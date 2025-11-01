@@ -27,6 +27,7 @@ let pc = null;
 let dc = null;
 let micStream = null;
 let isConnected = false;
+let lastAssistantMessage = null;
 
 async function getApiKey() {
   const res = await fetch("/api/config");
@@ -40,28 +41,25 @@ async function connectRealtime() {
 
     const apiKey = await getApiKey();
 
-    // 1. Capturar micrófono
     micStream = await navigator.mediaDevices.getUserMedia({
       audio: ClientConfig.audio,
     });
 
     updateStatus(ClientConfig.statusMessages.webrtcSetup, "processing");
 
-    // 2. Crear peer connection
     pc = new RTCPeerConnection();
 
-    // 3. Audio remoto (respuesta del modelo)
     const audioEl = document.createElement("audio");
     audioEl.autoplay = true;
     pc.ontrack = (e) => {
       audioEl.srcObject = e.streams[0];
     };
 
-    // 4. Data channel para eventos
     dc = pc.createDataChannel("oai-events");
 
     dc.onopen = () => {
       console.log("✅ Data channel abierto");
+      sendSessionUpdate();
     };
 
     dc.onmessage = (e) => {
@@ -69,16 +67,13 @@ async function connectRealtime() {
       handleServerEvent(event);
     };
 
-    // 5. Añadir pistas locales
     micStream.getTracks().forEach((track) => pc.addTrack(track, micStream));
 
-    // 6. Crear oferta
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
     updateStatus(ClientConfig.statusMessages.connecting, "processing");
 
-    // 7. Enviar oferta a OpenAI
     const response = await fetch(
       `${ClientConfig.realtime.apiUrl}?model=${ClientConfig.realtime.model}`,
       {
@@ -95,7 +90,6 @@ async function connectRealtime() {
       throw new Error(`Error ${response.status}: ${await response.text()}`);
     }
 
-    // 8. Establecer respuesta remota
     const answer = {
       type: "answer",
       sdp: await response.text(),
@@ -114,8 +108,27 @@ async function connectRealtime() {
   }
 }
 
-let currentUserMessage = "";
-let currentAssistantMessage = "";
+function sendSessionUpdate() {
+  const event = {
+    type: "session.update",
+    session: {
+      modalities: ["text", "audio"],
+      instructions:
+        "Eres un asistente amigable de SENATI en Perú. Responde brevemente en español sobre carreras, admisión, sedes y costos.",
+      voice: "alloy",
+      input_audio_format: "pcm16",
+      output_audio_format: "pcm16",
+      input_audio_transcription: { model: "whisper-1" },
+      turn_detection: {
+        type: "server_vad",
+        threshold: 0.5,
+        prefix_padding_ms: 300,
+        silence_duration_ms: 500,
+      },
+    },
+  };
+  dc.send(JSON.stringify(event));
+}
 
 function handleServerEvent(event) {
   console.log("📨", event.type);
@@ -128,7 +141,6 @@ function handleServerEvent(event) {
 
     case "input_audio_buffer.speech_started":
       updateStatus(ClientConfig.statusMessages.listening, "listening");
-      currentUserMessage = "";
       break;
 
     case "input_audio_buffer.speech_stopped":
@@ -136,32 +148,15 @@ function handleServerEvent(event) {
       break;
 
     case "conversation.item.input_audio_transcription.completed":
-      if (event.transcript) {
-        addMessage("user", event.transcript);
-      }
-      break;
-
-    case "response.output_item.added":
-      currentAssistantMessage = "";
-      lastAssistantMessage = null;
+      if (event.transcript) addMessage("user", event.transcript);
       break;
 
     case "response.audio_transcript.delta":
-      if (event.delta) {
-        currentAssistantMessage += event.delta;
-        addMessage("assistant", event.delta, true);
-      }
-      break;
-
-    case "response.audio_transcript.done":
-      if (currentAssistantMessage) {
-        lastAssistantMessage = null;
-      }
+      if (event.delta) addMessage("assistant", event.delta, true);
       break;
 
     case "response.done":
       updateStatus(ClientConfig.statusMessages.ready, "success");
-      lastAssistantMessage = null;
       break;
 
     case "error":
@@ -178,7 +173,7 @@ function handleServerEvent(event) {
 
 function cleanup() {
   if (micStream) {
-    micStream.getTracks().forEach((track) => track.stop());
+    micStream.getTracks().forEach((t) => t.stop());
     micStream = null;
   }
   if (pc) {
@@ -224,12 +219,9 @@ function updateStatus(text, type) {
   `;
 }
 
-let lastAssistantMessage = null;
-
 function addMessage(role, text, isPartial = false) {
-  if (!text || text.trim() === "") return;
-
   const conversation = document.getElementById("conversation");
+  if (!text || text.trim() === "") return;
 
   if (role === "assistant" && isPartial) {
     if (!lastAssistantMessage) {
@@ -245,19 +237,32 @@ function addMessage(role, text, isPartial = false) {
       `;
       conversation.appendChild(lastAssistantMessage);
     }
-    const p = lastAssistantMessage.querySelector("p");
-    p.textContent += text;
-  } else if (role === "user") {
+    lastAssistantMessage.querySelector("p").textContent += text;
+  } else {
+    lastAssistantMessage = null;
     const messageDiv = document.createElement("div");
-    messageDiv.className = "flex items-start space-x-3 justify-end mb-4";
-    messageDiv.innerHTML = `
-      <div class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-none p-4 max-w-md ml-auto">
-        <p>${escapeHtml(text)}</p>
-      </div>
-      <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-        <span class="text-white text-sm">👤</span>
-      </div>
-    `;
+    messageDiv.className =
+      role === "user"
+        ? "flex items-start space-x-3 justify-end mb-4"
+        : "flex items-start space-x-3 mb-4";
+    messageDiv.innerHTML =
+      role === "user"
+        ? `
+        <div class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-none p-4 max-w-md ml-auto">
+          <p>${escapeHtml(text)}</p>
+        </div>
+        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+          <span class="text-white text-sm">👤</span>
+        </div>
+      `
+        : `
+        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+          <span class="text-white text-sm">🤖</span>
+        </div>
+        <div class="flex-1 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl rounded-tl-none p-4">
+          <p class="text-gray-800">${escapeHtml(text)}</p>
+        </div>
+      `;
     conversation.appendChild(messageDiv);
   }
 
