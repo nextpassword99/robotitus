@@ -74,26 +74,20 @@ IMPORTANTE: SIEMPRE responde en español.`;
     const event = {
       type: 'session.update',
       session: {
-        model: 'gpt-4o-realtime-preview-2024-12-17',
-        output_modalities: ['audio', 'text'],
-        audio: {
-          input: {
-            format: {
-              type: 'audio/pcm',
-              rate: 24000
-            },
-            turn_detection: {
-              type: 'semantic_vad'
-            }
-          },
-          output: {
-            format: {
-              type: 'audio/pcm'
-            },
-            voice: 'alloy'
-          }
+        modalities: ['text', 'audio'],
+        instructions: systemMessage,
+        voice: 'alloy',
+        input_audio_format: 'pcm16',
+        output_audio_format: 'pcm16',
+        input_audio_transcription: {
+          model: 'whisper-1'
         },
-        instructions: systemMessage
+        turn_detection: {
+          type: 'server_vad',
+          threshold: 0.5,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 500
+        }
       }
     };
 
