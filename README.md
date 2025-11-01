@@ -105,17 +105,16 @@ El sistema soporta herramientas MCP que se integran automáticamente con el Real
 
 Toda la configuración del sistema está centralizada en:
 
-- **Servidor**: `src/config/realtime.config.ts`
+- **Servidor**: `src/config/realtime.config.ts` (Single Source of Truth)
   - System prompts
   - Parámetros de voz y audio
   - Configuración VAD
   - Mensajes de estado
   - Límites y timeouts
 
-- **Cliente**: `public/realtime.js` (objeto `ClientConfig`)
-  - Mensajes de estado UI
-  - Parámetros de audio
-  - URLs y modelos
+- **Cliente**: `public/realtime.js`
+  - Obtiene configuración del servidor vía `/api/config`
+  - No duplica configuración (DRY principle)
 
 ## Notas
 

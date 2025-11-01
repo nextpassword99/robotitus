@@ -1,51 +1,36 @@
-const ClientConfig = {
-  statusMessages: {
-    connecting: "Conectando con el asistente...",
-    connected: "Conectado - Habla cuando quieras",
-    listening: "Escuchando...",
-    processing: "Procesando...",
-    error: "Error de conexión",
-    disconnected: "Desconectado",
-    microphoneRequest: "Solicitando micrófono...",
-    webrtcSetup: "Configurando conexión...",
-    ready: "Listo - Habla cuando quieras",
-  },
-  audio: {
-    channelCount: 1,
-    sampleRate: 24000,
-    echoCancellation: true,
-    noiseSuppression: true,
-    autoGainControl: true,
-  },
-  realtime: {
-    model: "gpt-4o-realtime-preview-2024-12-17",
-    apiUrl: "https://api.openai.com/v1/realtime",
-  },
-};
-
+let serverConfig = null;
 let pc = null;
 let dc = null;
 let micStream = null;
 let isConnected = false;
 let lastAssistantMessage = null;
 
-async function getApiKey() {
-  const res = await fetch("/api/config");
-  const config = await res.json();
-  return config.openaiApiKey;
+async function getServerConfig() {
+  if (!serverConfig) {
+    const res = await fetch("/api/config");
+    serverConfig = await res.json();
+  }
+  return serverConfig;
 }
 
 async function connectRealtime() {
   try {
-    updateStatus(ClientConfig.statusMessages.microphoneRequest, "processing");
+    const config = await getServerConfig();
+    const { realtime, openaiApiKey } = config;
 
-    const apiKey = await getApiKey();
+    updateStatus(realtime.statusMessages.microphoneRequest, "processing");
 
     micStream = await navigator.mediaDevices.getUserMedia({
-      audio: ClientConfig.audio,
+      audio: {
+        channelCount: 1,
+        sampleRate: realtime.audio.sampleRate,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
     });
 
-    updateStatus(ClientConfig.statusMessages.webrtcSetup, "processing");
+    updateStatus(realtime.statusMessages.webrtcSetup, "processing");
 
     pc = new RTCPeerConnection();
 
@@ -72,14 +57,14 @@ async function connectRealtime() {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
-    updateStatus(ClientConfig.statusMessages.connecting, "processing");
+    updateStatus(realtime.statusMessages.connecting, "processing");
 
     const response = await fetch(
-      `${ClientConfig.realtime.apiUrl}?model=${ClientConfig.realtime.model}`,
+      `https://api.openai.com/v1/realtime?model=${realtime.model}`,
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${openaiApiKey}`,
           "Content-Type": "application/sdp",
         },
         body: offer.sdp,
@@ -97,54 +82,61 @@ async function connectRealtime() {
     await pc.setRemoteDescription(answer);
 
     isConnected = true;
-    updateStatus(ClientConfig.statusMessages.connected, "success");
+    updateStatus(realtime.statusMessages.connected, "success");
   } catch (error) {
     console.error("❌ Error:", error);
+    const config = await getServerConfig();
     updateStatus(
-      `${ClientConfig.statusMessages.error}: ${error.message}`,
+      `${config.realtime.statusMessages.error}: ${error.message}`,
       "error"
     );
     cleanup();
   }
 }
 
-function sendSessionUpdate() {
+async function sendSessionUpdate() {
+  const config = await getServerConfig();
+  const { realtime } = config;
+
   const event = {
     type: "session.update",
     session: {
-      modalities: ["text", "audio"],
-      instructions:
-        "Eres un asistente amigable de SENATI en Perú. Responde brevemente en español sobre carreras, admisión, sedes y costos.",
-      voice: "alloy",
-      input_audio_format: "pcm16",
-      output_audio_format: "pcm16",
-      input_audio_transcription: { model: "whisper-1" },
+      modalities: realtime.modalities,
+      instructions: realtime.instructions,
+      voice: realtime.voice,
+      input_audio_format: realtime.audio.inputFormat,
+      output_audio_format: realtime.audio.outputFormat,
+      input_audio_transcription: realtime.transcription.enabled
+        ? { model: realtime.transcription.model }
+        : undefined,
       turn_detection: {
-        type: "server_vad",
-        threshold: 0.5,
-        prefix_padding_ms: 300,
-        silence_duration_ms: 500,
+        type: realtime.vad.type,
+        threshold: realtime.vad.threshold,
+        prefix_padding_ms: realtime.vad.prefixPaddingMs,
+        silence_duration_ms: realtime.vad.silenceDurationMs,
       },
     },
   };
   dc.send(JSON.stringify(event));
 }
 
-function handleServerEvent(event) {
+async function handleServerEvent(event) {
   console.log("📨", event.type);
+  const config = await getServerConfig();
+  const { statusMessages } = config.realtime;
 
   switch (event.type) {
     case "session.created":
     case "session.updated":
-      updateStatus(ClientConfig.statusMessages.ready, "success");
+      updateStatus(statusMessages.ready, "success");
       break;
 
     case "input_audio_buffer.speech_started":
-      updateStatus(ClientConfig.statusMessages.listening, "listening");
+      updateStatus(statusMessages.listening, "listening");
       break;
 
     case "input_audio_buffer.speech_stopped":
-      updateStatus(ClientConfig.statusMessages.processing, "processing");
+      updateStatus(statusMessages.processing, "processing");
       break;
 
     case "conversation.item.input_audio_transcription.completed":
@@ -156,15 +148,13 @@ function handleServerEvent(event) {
       break;
 
     case "response.done":
-      updateStatus(ClientConfig.statusMessages.ready, "success");
+      updateStatus(statusMessages.ready, "success");
       break;
 
     case "error":
       console.error("Error:", event.error);
       updateStatus(
-        `${ClientConfig.statusMessages.error}: ${
-          event.error?.message || "Desconocido"
-        }`,
+        `${statusMessages.error}: ${event.error?.message || "Desconocido"}`,
         "error"
       );
       break;
@@ -193,7 +183,8 @@ async function toggleRecording() {
     document.getElementById("pulse").classList.remove("hidden");
   } else {
     cleanup();
-    updateStatus(ClientConfig.statusMessages.disconnected, "error");
+    const config = await getServerConfig();
+    updateStatus(config.realtime.statusMessages.disconnected, "error");
     document
       .getElementById("micCircle")
       .classList.remove("scale-110", "shadow-2xl");
