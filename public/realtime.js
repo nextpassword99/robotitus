@@ -5,18 +5,20 @@ let micStream = null;
 let isConnected = false;
 let lastAssistantMessage = null;
 
-async function getServerConfig() {
-  if (!serverConfig) {
-    const res = await fetch("/api/config");
-    serverConfig = await res.json();
-  }
-  return serverConfig;
-}
+// Cargar config al inicio
+(async () => {
+  const res = await fetch("/api/config");
+  serverConfig = await res.json();
+  console.log("✅ Configuración cargada");
+})();
 
 async function connectRealtime() {
   try {
-    const config = await getServerConfig();
-    const { realtime, openaiApiKey } = config;
+    if (!serverConfig) {
+      const res = await fetch("/api/config");
+      serverConfig = await res.json();
+    }
+    const { realtime, openaiApiKey } = serverConfig;
 
     updateStatus(realtime.statusMessages.microphoneRequest, "processing");
 
@@ -36,8 +38,13 @@ async function connectRealtime() {
 
     const audioEl = document.createElement("audio");
     audioEl.autoplay = true;
+    audioEl.style.display = "none";
+    document.body.appendChild(audioEl);
+    
     pc.ontrack = (e) => {
+      console.log("🔊 Audio remoto recibido");
       audioEl.srcObject = e.streams[0];
+      audioEl.play().catch(err => console.error("Error reproduciendo audio:", err));
     };
 
     dc = pc.createDataChannel("oai-events");
@@ -85,45 +92,44 @@ async function connectRealtime() {
     updateStatus(realtime.statusMessages.connected, "success");
   } catch (error) {
     console.error("❌ Error:", error);
-    const config = await getServerConfig();
-    updateStatus(
-      `${config.realtime.statusMessages.error}: ${error.message}`,
-      "error"
-    );
+    updateStatus(`Error: ${error.message}`, "error");
     cleanup();
   }
 }
 
-async function sendSessionUpdate() {
-  const config = await getServerConfig();
-  const { realtime } = config;
+function sendSessionUpdate() {
+  const { realtime } = serverConfig;
+
+  const session = {
+    modalities: realtime.modalities,
+    instructions: realtime.instructions,
+    voice: realtime.voice,
+    input_audio_format: realtime.audio.inputFormat,
+    output_audio_format: realtime.audio.outputFormat,
+    turn_detection: {
+      type: realtime.vad.type,
+      threshold: realtime.vad.threshold,
+      prefix_padding_ms: realtime.vad.prefixPaddingMs,
+      silence_duration_ms: realtime.vad.silenceDurationMs,
+    },
+  };
+
+  if (realtime.transcription.enabled) {
+    session.input_audio_transcription = { model: realtime.transcription.model };
+  }
 
   const event = {
     type: "session.update",
-    session: {
-      modalities: realtime.modalities,
-      instructions: realtime.instructions,
-      voice: realtime.voice,
-      input_audio_format: realtime.audio.inputFormat,
-      output_audio_format: realtime.audio.outputFormat,
-      input_audio_transcription: realtime.transcription.enabled
-        ? { model: realtime.transcription.model }
-        : undefined,
-      turn_detection: {
-        type: realtime.vad.type,
-        threshold: realtime.vad.threshold,
-        prefix_padding_ms: realtime.vad.prefixPaddingMs,
-        silence_duration_ms: realtime.vad.silenceDurationMs,
-      },
-    },
+    session: session,
   };
+  
+  console.log("📤 Enviando configuración:", JSON.stringify(event, null, 2));
   dc.send(JSON.stringify(event));
 }
 
-async function handleServerEvent(event) {
-  console.log("📨", event.type);
-  const config = await getServerConfig();
-  const { statusMessages } = config.realtime;
+function handleServerEvent(event) {
+  console.log("📨", event.type, event);
+  const { statusMessages } = serverConfig.realtime;
 
   switch (event.type) {
     case "session.created":
@@ -143,11 +149,28 @@ async function handleServerEvent(event) {
       if (event.transcript) addMessage("user", event.transcript);
       break;
 
+    case "conversation.item.input_audio_transcription.failed":
+      console.warn("⚠️ Transcripción fallida:", event.error);
+      break;
+
+    case "response.audio.delta":
+      console.log("🎵 Audio delta recibido");
+      break;
+
+    case "response.audio.done":
+      console.log("✅ Audio completo");
+      break;
+
     case "response.audio_transcript.delta":
       if (event.delta) addMessage("assistant", event.delta, true);
       break;
 
+    case "response.audio_transcript.done":
+      if (event.transcript) addMessage("assistant", event.transcript);
+      break;
+
     case "response.done":
+      console.log("🏁 Respuesta completa:", event.response);
       updateStatus(statusMessages.ready, "success");
       break;
 
@@ -183,8 +206,7 @@ async function toggleRecording() {
     document.getElementById("pulse").classList.remove("hidden");
   } else {
     cleanup();
-    const config = await getServerConfig();
-    updateStatus(config.realtime.statusMessages.disconnected, "error");
+    updateStatus(serverConfig.realtime.statusMessages.disconnected, "error");
     document
       .getElementById("micCircle")
       .classList.remove("scale-110", "shadow-2xl");

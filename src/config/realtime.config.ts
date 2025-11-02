@@ -36,7 +36,7 @@ export const RealtimeConfig = {
    * Configuración de transcripción
    */
   transcription: {
-    enabled: true,
+    enabled: false, // Deshabilitado por rate limits de Whisper
     model: "whisper-1",
   },
 
@@ -65,6 +65,8 @@ export const RealtimeConfig = {
       "SÉ BREVE: Responde en 2-3 oraciones máximo",
       "Ve directo al punto sin rodeos innecesarios",
       "Usa un tono conversacional como si estuvieras hablando",
+      "RESPONDE DIRECTAMENTE A LA PREGUNTA DEL USUARIO",
+      "Si te preguntan algo específico (como la fecha), responde ESO primero",
     ],
 
     /**
@@ -117,6 +119,7 @@ export const RealtimeConfig = {
     disconnected: "Desconectado",
     microphoneRequest: "Solicitando micrófono...",
     webrtcSetup: "Configurando conexión...",
+    ready: "Listo - Habla cuando quieras",
   },
 
   /**
