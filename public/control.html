@@ -24,10 +24,26 @@
         </button>
       </div>
       
-      <div class="mt-4">
-        <label class="block text-sm font-medium text-gray-300 mb-2">IP del ESP32:</label>
-        <input type="text" id="espIp" value="192.168.1.100" 
-               class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-cyan-500">
+      <div class="mt-4 space-y-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Host del ESP32:</label>
+          <input type="text" id="espIp" value="esp.trodi.dev" 
+                 class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-cyan-500"
+                 placeholder="esp.trodi.dev o 192.168.1.100">
+        </div>
+        
+        <div class="flex items-center space-x-3">
+          <label class="flex items-center cursor-pointer">
+            <input type="checkbox" id="useSSL" checked 
+                   class="w-5 h-5 text-cyan-600 bg-slate-700 border-slate-600 rounded focus:ring-cyan-500">
+            <span class="ml-2 text-sm font-medium text-gray-300">
+              🔒 Usar SSL/TLS (wss:// y https://)
+            </span>
+          </label>
+          <span class="text-xs text-gray-500">
+            Desactiva para red local sin túnel
+          </span>
+        </div>
       </div>
     </div>
 
