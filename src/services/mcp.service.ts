@@ -26,7 +26,7 @@ export class MCPService {
         const transport = new StdioClientTransport({
           command: config.command,
           args: config.args,
-          env: { ...process.env, ...config.env }
+          env: Object.fromEntries(Object.entries({ ...process.env, ...config.env }).filter(([, value]) => value !== undefined)) as Record<string, string>
         });
         const client = new Client({ name: 'senati-assistant', version: '1.0.0' }, { capabilities: {} });
         await client.connect(transport);
@@ -59,7 +59,7 @@ export class MCPService {
     if (!client) return console.error(`Cliente ${serverKey} no conectado`), null;
     try {
       const result = await client.callTool({ name: toolName, arguments: args });
-      return result.content.filter((i: any) => i.type === 'text').map((i: any) => i.text).join('\n');
+      return (result.content as Array<{ type: string; text: string }>).filter((i) => i.type === 'text').map((i) => i.text).join('\n');
     } catch (error) {
       return console.error(`❌ Error ejecutando ${toolName}:`, error), null;
     }

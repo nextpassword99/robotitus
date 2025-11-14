@@ -25,7 +25,10 @@ export class VectorStoreService {
   private async initVectorStore() {
     try {
       const collection = await this.client.getOrCreateCollection({ name: env.COLLECTION_NAME });
-      this.vectorstore = new Chroma(this.embeddings, { collectionName: env.COLLECTION_NAME, index: collection });
+      this.vectorstore = new Chroma(this.embeddings, { 
+        collectionName: env.COLLECTION_NAME,
+        url: env.CHROMA_PERSIST_DIR 
+      });
     } catch (error) {
       console.warn('⚠️ No se pudo conectar a ChromaDB, continuando sin RAG');
     }
@@ -77,7 +80,10 @@ export class VectorStoreService {
       documents: chunks.map(c => c.pageContent),
       metadatas: chunks.map(c => c.metadata)
     });
-    this.vectorstore = new Chroma(this.embeddings, { collectionName: env.COLLECTION_NAME, index: collection });
+    this.vectorstore = new Chroma(this.embeddings, { 
+      collectionName: env.COLLECTION_NAME,
+      url: env.CHROMA_PERSIST_DIR 
+    });
     console.log(`✅ ${chunks.length} chunks indexados`);
   }
 
