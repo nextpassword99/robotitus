@@ -4,6 +4,72 @@ let dc = null;
 let micStream = null;
 let isConnected = false;
 let lastAssistantMessage = null;
+let audioActivated = false;
+let dummyAudioContext = null;
+
+// Cargar config al inicio
+(async () => {
+  const res = await fetch("/api/config");
+  serverConfig = await res.json();
+  console.log("✅ Configuración cargada");
+  
+  // Detectar si es móvil y mostrar aviso de activación de audio
+  checkMobileAudio();
+})();
+
+// Detectar móvil y preparar activación de audio
+function checkMobileAudio() {
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  if (isMobile) {
+    const warningDiv = document.getElementById('audioWarning');
+    const activateBtn = document.getElementById('activateAudioBtn');
+    
+    if (warningDiv && activateBtn) {
+      warningDiv.classList.remove('hidden');
+      
+      activateBtn.addEventListener('click', () => {
+        activateAudio();
+        warningDiv.classList.add('hidden');
+      });
+    }
+  }
+}
+
+// Activar audio para Bluetooth (requerido por navegadores móviles)
+function activateAudio() {
+  if (audioActivated) return;
+  
+  try {
+    // Crear un AudioContext dummy que se activa con interacción del usuario
+    dummyAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Reproducir un silencio breve para "desbloquear" el audio
+    const oscillator = dummyAudioContext.createOscillator();
+    const gainNode = dummyAudioContext.createGain();
+    gainNode.gain.value = 0.001; // Volumen muy bajo
+    oscillator.connect(gainNode);
+    gainNode.connect(dummyAudioContext.destination);
+    oscillator.start();
+    oscillator.stop(dummyAudioContext.currentTime + 0.1);
+    
+    audioActivated = true;
+    console.log('✅ Audio activado para Bluetooth');
+    
+    // Mostrar confirmación visual
+    const statusDiv = document.getElementById('status');
+    if (statusDiv) {
+      statusDiv.innerHTML = `
+        <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
+          <span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+          Audio activado - Presiona el micrófono para hablar
+        </span>
+      `;
+    }
+  } catch (error) {
+    console.error('Error activando audio:', error);
+  }
+}
 
 // Cargar config al inicio
 (async () => {
@@ -36,15 +102,56 @@ async function connectRealtime() {
 
     pc = new RTCPeerConnection();
 
+    // Crear elemento de audio con configuración optimizada para Bluetooth móvil
     const audioEl = document.createElement("audio");
     audioEl.autoplay = true;
+    audioEl.playsInline = true; // Crítico para iOS
+    audioEl.controls = false; // Ocultar controles pero mantener funcionalidad
+    audioEl.volume = 1.0; // Volumen máximo
     audioEl.style.display = "none";
+    
+    // Configurar para salida de audio Bluetooth
+    if (audioEl.setSinkId) {
+      // Intentar usar el dispositivo de audio predeterminado
+      navigator.mediaDevices.enumerateDevices()
+        .then(devices => {
+          const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+          console.log('📱 Dispositivos de audio disponibles:', audioOutputs.length);
+          audioOutputs.forEach(d => console.log(`  - ${d.label || 'Desconocido'} (${d.deviceId})`));
+        })
+        .catch(err => console.warn('No se pudieron enumerar dispositivos:', err));
+    }
+    
     document.body.appendChild(audioEl);
     
     pc.ontrack = (e) => {
       console.log("🔊 Audio remoto recibido");
       audioEl.srcObject = e.streams[0];
-      audioEl.play().catch(err => console.error("Error reproduciendo audio:", err));
+      
+      // Forzar reproducción con múltiples intentos
+      const playAudio = () => {
+        audioEl.play()
+          .then(() => {
+            console.log('✅ Audio reproduciéndose correctamente');
+            // Verificar que realmente esté sonando
+            if (audioEl.paused) {
+              console.warn('⚠️ Audio pausado inesperadamente, reintentando...');
+              setTimeout(playAudio, 100);
+            }
+          })
+          .catch(err => {
+            console.error("❌ Error reproduciendo audio:", err);
+            // Reintentar en caso de error (común en móviles)
+            setTimeout(playAudio, 200);
+          });
+      };
+      
+      playAudio();
+      
+      // Monitorear estado del audio
+      audioEl.onplaying = () => console.log('🎵 Audio playing');
+      audioEl.onpause = () => console.warn('⏸️ Audio pausado');
+      audioEl.onerror = (err) => console.error('❌ Error en elemento audio:', err);
     };
 
     dc = pc.createDataChannel("oai-events");
@@ -198,6 +305,11 @@ function cleanup() {
 }
 
 async function toggleRecording() {
+  // Activar audio automáticamente al primer clic (crítico para móviles)
+  if (!audioActivated) {
+    activateAudio();
+  }
+  
   if (!isConnected) {
     await connectRealtime();
     document

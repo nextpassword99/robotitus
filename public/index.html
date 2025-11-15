@@ -33,6 +33,20 @@
         </button>
       </div>
 
+      <!-- Aviso para activar audio en móvil -->
+      <div id="audioWarning" class="hidden mb-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
+        <div class="flex items-start">
+          <span class="text-2xl mr-3">🔊</span>
+          <div>
+            <p class="font-semibold text-yellow-800">Audio Bluetooth detectado</p>
+            <p class="text-sm text-yellow-700 mb-2">Toca aquí para activar el audio antes de usar el micrófono</p>
+            <button id="activateAudioBtn" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition">
+              ✓ Activar Audio
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div id="status" class="text-center mb-6">
         <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
           <span class="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
