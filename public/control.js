@@ -1,6 +1,7 @@
 let ws = null;
 let isConnected = false;
-let espIp = '192.168.1.100';
+let espIp = 'esp.trodi.dev';
+let useSSL = true; // Forzar SSL (wss/https)
 let motorValue = 90;
 let servoValue = 90;
 let statusInterval = null;
@@ -51,33 +52,85 @@ function toggleConnection() {
 
 function connect() {
   espIp = document.getElementById('espIp').value;
+  useSSL = document.getElementById('useSSL').checked;
+  
+  const protocol = useSSL ? 'wss' : 'ws';
+  const wsUrl = `${protocol}://${espIp}/ws`;
+  
+  log(`🔌 Intentando conectar a ${wsUrl}...`, 'info');
+  log(`📋 Protocolo: ${protocol.toUpperCase()}, Host: ${espIp}`, 'info');
   
   try {
-    ws = new WebSocket(`ws://${espIp}/ws`);
+    ws = new WebSocket(wsUrl);
     
-    ws.onopen = () => {
-      log(`Conexión establecida con ESP32 en ${espIp}`, 'success');
+    ws.onopen = (event) => {
+      log(`✅ WebSocket ABIERTO exitosamente`, 'success');
+      log(`📡 URL: ${event.target.url}`, 'success');
+      log(`🔒 Protocolo usado: ${event.target.protocol || 'default'}`, 'info');
       updateConnectionStatus(true);
       startStatusPolling();
     };
     
     ws.onmessage = (event) => {
-      log(`Mensaje recibido: ${event.data}`, 'info');
+      log(`📨 Mensaje: ${event.data}`, 'info');
     };
     
-    ws.onerror = (error) => {
-      log(`Error de conexión: ${error.message || 'Desconocido'}`, 'error');
+    ws.onerror = (event) => {
+      log(`❌ ERROR WebSocket detectado`, 'error');
+      log(`🔍 Target URL: ${event.target?.url || 'N/A'}`, 'error');
+      log(`🔍 ReadyState: ${event.target?.readyState} (0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED)`, 'error');
+      
+      if (useSSL) {
+        log(`⚠️ Error con SSL. Posibles causas:`, 'warning');
+        log(`   • Certificado SSL inválido o autofirmado`, 'warning');
+        log(`   • Túnel no configurado para WebSocket`, 'warning');
+        log(`   • Mixed content (HTTPS → WS)`, 'warning');
+        log(`💡 Intenta desactivar SSL si es red local`, 'warning');
+      } else {
+        log(`⚠️ Error sin SSL. Posibles causas:`, 'warning');
+        log(`   • ESP32 no accesible en ${espIp}`, 'warning');
+        log(`   • Firewall bloqueando puerto 80`, 'warning');
+        log(`   • IP incorrecta`, 'warning');
+      }
+      
       updateConnectionStatus(false);
     };
     
-    ws.onclose = () => {
-      log('Conexión cerrada', 'warning');
+    ws.onclose = (event) => {
+      const reasons = {
+        1000: 'Cierre normal',
+        1001: 'Endpoint desaparecido',
+        1002: 'Error de protocolo',
+        1003: 'Datos no aceptados',
+        1006: 'Conexión perdida (sin handshake)',
+        1007: 'Datos inválidos',
+        1008: 'Política violada',
+        1009: 'Mensaje muy grande',
+        1011: 'Error del servidor',
+        1015: 'Fallo TLS/SSL'
+      };
+      
+      const reason = reasons[event.code] || 'Desconocido';
+      log(`🔌 Conexión CERRADA`, 'warning');
+      log(`📋 Código: ${event.code} - ${reason}`, 'warning');
+      log(`📋 Razón: ${event.reason || 'Sin detalles'}`, 'warning');
+      log(`📋 Clean: ${event.wasClean ? 'Sí' : 'No (abrupto)'}`, 'warning');
+      
+      if (event.code === 1006) {
+        log(`⚠️ Código 1006 indica problema de red o SSL`, 'error');
+      }
+      if (event.code === 1015) {
+        log(`⚠️ Código 1015: Fallo SSL/TLS - Verifica certificado`, 'error');
+      }
+      
       updateConnectionStatus(false);
       stopStatusPolling();
     };
     
   } catch (error) {
-    log(`Error al conectar: ${error.message}`, 'error');
+    log(`💥 EXCEPCIÓN al crear WebSocket: ${error.name}`, 'error');
+    log(`📋 Mensaje: ${error.message}`, 'error');
+    log(`📋 Stack: ${error.stack?.split('\n')[0] || 'N/A'}`, 'error');
     updateConnectionStatus(false);
   }
 }
@@ -144,16 +197,19 @@ function startStatusPolling() {
   statusInterval = setInterval(() => {
     if (!espIp) return;
     
-    fetch(`http://${espIp}/status`)
+    const protocol = useSSL ? 'https' : 'http';
+    
+    fetch(`${protocol}://${espIp}/status`)
       .then(r => r.text())
       .then(text => {
-        // Mostrar estado en los logs ocasionalmente
-        if (Math.random() < 0.1) { // 10% de las veces
-          log(`Estado ESP32: ${text}`, 'info');
+        if (Math.random() < 0.1) {
+          log(`📊 Estado: ${text}`, 'info');
         }
       })
-      .catch(() => {
-        // Silencioso en caso de error
+      .catch(err => {
+        if (Math.random() < 0.05) {
+          log(`⚠️ Polling falló: ${err.message}`, 'warning');
+        }
       });
   }, 2000);
 }
@@ -203,9 +259,21 @@ window.addEventListener('load', () => {
     espIp = savedIp;
   }
   
-  // Guardar IP cuando cambia
+  // Guardar IP y SSL cuando cambian
   document.getElementById('espIp').addEventListener('change', (e) => {
     localStorage.setItem('espIp', e.target.value);
+  });
+  
+  const savedSSL = localStorage.getItem('useSSL');
+  if (savedSSL !== null) {
+    document.getElementById('useSSL').checked = savedSSL === 'true';
+    useSSL = savedSSL === 'true';
+  }
+  
+  document.getElementById('useSSL').addEventListener('change', (e) => {
+    localStorage.setItem('useSSL', e.target.checked);
+    useSSL = e.target.checked;
+    log(`🔒 SSL ${e.target.checked ? 'activado' : 'desactivado'}`, 'info');
   });
   
   // Setup sliders
@@ -330,45 +398,63 @@ function setupGamepad() {
 
 // ========== CONTROL DE EMOCIONES ==========
 function connectFaceControl() {
-  const protocol = globalThis.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${globalThis.location.host}/face-control`;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/face-control`;
   
   try {
     faceWs = new WebSocket(wsUrl);
     
     faceWs.onopen = () => {
       console.log('✅ Control de rostro conectado');
-      log('Control de rostro listo', 'success');
+      log('😊 Control de rostro listo', 'success');
     };
     
     faceWs.onerror = (error) => {
-      console.error('Error en control de rostro:', error);
+      console.error('❌ Error en control de rostro:', error);
+      log(`⚠️ Control de rostro: Error de conexión (${wsUrl})`, 'warning');
     };
     
-    faceWs.onclose = () => {
-      console.log('Control de rostro desconectado');
-      setTimeout(connectFaceControl, 2000);
+    faceWs.onclose = (event) => {
+      console.log('🔌 Control de rostro desconectado');
+      if (event.code !== 1000) {
+        log(`⚠️ Control de rostro desconectado (código ${event.code})`, 'warning');
+      }
+      setTimeout(connectFaceControl, 5000);
     };
     
   } catch (error) {
-    console.error('Error al conectar control de rostro:', error);
+    console.error('💥 Excepción al conectar control de rostro:', error);
+    log(`❌ Error al conectar control de rostro: ${error.message}`, 'error');
   }
 }
 
 function sendEmotion(emotion) {
   if (!faceWs || faceWs.readyState !== WebSocket.OPEN) {
-    log('Control de rostro no conectado, intentando...', 'warning');
+    log('😕 Control de rostro no conectado, intentando...', 'warning');
     connectFaceControl();
     return;
   }
   
   try {
     faceWs.send(JSON.stringify({ emotion }));
-    log(`Emoción enviada: ${emotion}`, 'success');
+    log(`😊 Emoción enviada: ${emotion}`, 'success');
   } catch (error) {
-    log(`Error enviando emoción: ${error.message}`, 'error');
+    log(`❌ Error enviando emoción: ${error.message}`, 'error');
   }
 }
 
-// Iniciar conexión de control de rostro
-connectFaceControl();
+// Iniciar conexión de control de rostro solo si estamos en la misma página
+// (evita errores cuando el túnel no soporta WebSocket)
+if (window.location.pathname === '/control.html' || window.location.pathname === '/control') {
+  // Intentar conectar solo si el servidor es local o el túnel soporta WebSocket
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  if (isLocal) {
+    setTimeout(() => {
+      connectFaceControl();
+    }, 1000);
+  } else {
+    console.log('⚠️ Control de rostro deshabilitado en túnel (requiere configuración WebSocket)');
+    log('ℹ️ Control de rostro: Requiere túnel con soporte WebSocket', 'info');
+  }
+}
