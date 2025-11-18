@@ -7,6 +7,8 @@ let lastAssistantMessage = null;
 let currentResponseId = null;
 let audioActivated = false;
 let dummyAudioContext = null;
+let inactivityTimeout = null;
+let hasUserSpoken = false;
 
 // Cargar config al inicio
 (async () => {
@@ -171,22 +173,39 @@ function sendSessionUpdate() {
 }
 
 function handleServerEvent(event) {
-  console.log("📨", event.type, event);
+  console.log("IA Hablando", event.type, event);
   const { statusMessages } = serverConfig.realtime;
 
   switch (event.type) {
     case "session.created":
     case "session.updated":
       updateStatus(statusMessages.ready, "success");
+      // Mensaje de voz: Sistema listo
+      if (typeof speakMessage === 'function') {
+        speakMessage("Sistema listo.", 1.2);
+      }
+      // NO iniciar timeout aquí - esperamos a que el usuario hable primero
       break;
 
     case "input_audio_buffer.speech_started":
       updateStatus(statusMessages.listening, "listening");
+      // Usuario empezó a hablar, cancelar timeout
+      clearInactivityTimeout();
+      hasUserSpoken = true;
       break;
 
     case "input_audio_buffer.speech_stopped":
       updateStatus(statusMessages.processing, "processing");
+      // No anunciar "Procesando" - dejamos que fluya naturalmente
+
+      console.log("⏱️ Usuario dejó de hablar, iniciando procesamiento...");
       break;
+
+    case "output_audio_buffer.stopped":
+        // Reprodución de audio terminó
+        console.log("✅ Reproducción de audio terminó");
+        startInactivityTimeout();
+        break;
 
     case "conversation.item.input_audio_transcription.completed":
       if (event.transcript) addMessage("user", event.transcript);
@@ -211,11 +230,17 @@ function handleServerEvent(event) {
       }
       break;
 
+    case "response.output_item.done":
+      console.log("📝 Output item completado (texto generado):", event);
+      // NO iniciar timeout aquí - el audio aún se está reproduciendo
+      break;
+
     case "response.done":
       console.log("🏁 Respuesta completa:", event.response);
       lastAssistantMessage = null;
       currentResponseId = null;
       updateStatus(statusMessages.ready, "success");
+      
       break;
 
     case "error":
@@ -224,7 +249,47 @@ function handleServerEvent(event) {
         `${statusMessages.error}: ${event.error?.message || "Desconocido"}`,
         "error"
       );
+      // Mensaje de voz de error
+      if (typeof speakMessage === 'function') {
+        speakMessage("Error en el sistema.", 1.1);
+      }
       break;
+  }
+}
+
+/**
+ * Iniciar timeout de inactividad
+ * Si el usuario no habla en 10 segundos, cerrar la sesión
+ */
+function startInactivityTimeout() {
+  clearInactivityTimeout();
+  hasUserSpoken = false;
+  
+  inactivityTimeout = setTimeout(() => {
+    if (!hasUserSpoken && isConnected) {
+      console.log('⏱️ Timeout de inactividad - cerrando sesión');
+      updateStatus('⏱️ No detecté tu voz, volviendo a modo espera...', 'error');
+      
+      // Mensaje de voz: No detecté tu voz (sin el "Desactivando")
+      if (typeof speakMessage === 'function') {
+        speakMessage("No detecté tu voz.", 1.1);
+      }
+      
+      // Esperar 2 segundos y luego cleanup directo
+      setTimeout(() => {
+        cleanup();
+      }, 2000);
+    }
+  }, 10000); // 10 segundos
+}
+
+/**
+ * Cancelar timeout de inactividad
+ */
+function clearInactivityTimeout() {
+  if (inactivityTimeout) {
+    clearTimeout(inactivityTimeout);
+    inactivityTimeout = null;
   }
 }
 
@@ -248,6 +313,9 @@ function showAssistantMessage(text) {
 }
 
 function cleanup() {
+  // Limpiar timeout de inactividad
+  clearInactivityTimeout();
+  
   if (micStream) {
     micStream.getTracks().forEach((t) => t.stop());
     micStream = null;
@@ -258,6 +326,15 @@ function cleanup() {
   }
   dc = null;
   isConnected = false;
+  hasUserSpoken = false;
+  
+  // Volver a modo wake word después de cerrar la sesión
+  if (typeof startListeningForWakeWord === 'function') {
+    console.log('🔄 Volviendo a modo wake word...');
+    setTimeout(() => {
+      startListeningForWakeWord();
+    }, 1000);
+  }
 }
 
 async function toggleRecording() {

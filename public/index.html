@@ -91,6 +91,77 @@
     </div>
   </div>
 
+  <!-- Porcupine Wake Word Scripts -->
+  <script src="https://unpkg.com/@picovoice/porcupine-web@3.0.2/dist/iife/index.js"></script>
+  <script src="https://unpkg.com/@picovoice/web-voice-processor@4.0.9/dist/iife/index.js"></script>
+  
+  <!-- Configuración de mensajes de audio -->
+  <script src="/audio-messages.js"></script>
+  
+  <!-- Configuración y módulo de Porcupine -->
+  <script src="/porcupine.js"></script>
+  
+  <!-- OpenAI Realtime -->
   <script src="/realtime.js"></script>
+  
+  <!-- Inicialización automática de Porcupine -->
+  <script>
+    // Inicializar voces de TTS
+    if ('speechSynthesis' in window) {
+      // Cargar voces (necesario en algunos navegadores)
+      window.speechSynthesis.onvoiceschanged = () => {
+        const voices = window.speechSynthesis.getVoices();
+        console.log('🗣️ Voces TTS cargadas:', voices.filter(v => v.lang.startsWith('es')).map(v => v.name));
+      };
+      // Trigger inicial
+      window.speechSynthesis.getVoices();
+    }
+    
+    // Inicializar Porcupine cuando la página cargue
+    window.addEventListener('load', async () => {
+      console.log('🚀 Iniciando sistema de wake word...');
+      
+      // Verificar que Porcupine esté disponible
+      if (typeof globalThis.PorcupineWeb === 'undefined') {
+        console.error('❌ Porcupine Web no está cargado');
+        return;
+      }
+      
+      if (typeof globalThis.WebVoiceProcessor === 'undefined') {
+        console.error('❌ WebVoiceProcessor no está cargado');
+        return;
+      }
+      
+      // Cargar configuración desde el servidor
+      try {
+        await loadPorcupineConfig();
+      } catch (error) {
+        console.error('❌ Error cargando configuración:', error);
+        return;
+      }
+      
+      // Inicializar Porcupine
+      const success = await initPorcupine();
+      
+      if (success) {
+        // Iniciar escucha automática
+        setTimeout(async () => {
+          await startListeningForWakeWord();
+          console.log('✅ Sistema de wake word activo');
+          // Mensaje de bienvenida por voz
+          if (typeof speakMessage === 'function') {
+            speakMessage("Sistema iniciado. Di jarvis para activar.", 1.0);
+          }
+        }, 1000);
+      }
+    });
+    
+    // Limpiar recursos al cerrar
+    window.addEventListener('beforeunload', () => {
+      if (typeof cleanupPorcupine === 'function') {
+        cleanupPorcupine();
+      }
+    });
+  </script>
 </body>
 </html>

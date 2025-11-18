@@ -146,6 +146,34 @@ export const RealtimeConfig = {
     logEvents: true,
     logFunctionCalls: true,
   },
+
+  /**
+   * Configuración de Porcupine Wake Word
+   */
+  porcupine: {
+    enabled: true,
+    keywords: [
+      {
+        label: 'leopardo',
+        publicPath: '/keywords/leopardo_wasm.ppn',
+        sensitivity: 0.7
+      },
+      {
+        label: 'manzana',
+        publicPath: '/keywords/manzana_wasm.ppn',
+        sensitivity: 0.7
+      },
+      {
+        label: 'jarvis',
+        publicPath: '/keywords/jarvis_wasm.ppn',
+        sensitivity: 0.7
+      }
+    ],
+    modelPath: '/models/porcupine_params_es.pv',
+    autoStart: true,
+    timeoutAfterDetection: 30000,
+    showNotifications: true
+  },
 } as const;
 
 /**

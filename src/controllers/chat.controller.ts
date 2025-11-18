@@ -26,5 +26,14 @@ export const getConfig = (req: Request, res: Response) => {
       transcription: RealtimeConfig.transcription,
       statusMessages: RealtimeConfig.statusMessages,
     },
+    porcupine: {
+      accessKey: env.PORCUPINE_ACCESS_KEY || null,
+      enabled: RealtimeConfig.porcupine.enabled,
+      keywords: RealtimeConfig.porcupine.keywords,
+      modelPath: RealtimeConfig.porcupine.modelPath,
+      autoStart: RealtimeConfig.porcupine.autoStart,
+      timeoutAfterDetection: RealtimeConfig.porcupine.timeoutAfterDetection,
+      showNotifications: RealtimeConfig.porcupine.showNotifications,
+    },
   });
 };
