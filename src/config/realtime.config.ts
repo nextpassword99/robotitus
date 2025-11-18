@@ -27,9 +27,9 @@ export const RealtimeConfig = {
    */
   vad: {
     type: "server_vad" as const,
-    threshold: 0.5,
+    threshold: 0.6,
     prefixPaddingMs: 300,
-    silenceDurationMs: 500,
+    silenceDurationMs: 800,
   },
 
   /**
@@ -61,6 +61,13 @@ export const RealtimeConfig = {
       "Certificaciones y títulos",
     ],
 
+    restrictions: [
+      "SOLO puedes responder preguntas relacionadas con SENATI",
+      "Si te preguntan sobre otros temas, educadamente redirige a SENATI",
+      "No proporciones información general que no esté relacionada con SENATI",
+      "Tu conocimiento se limita exclusivamente a SENATI y sus servicios",
+    ],
+
     responseStyle: [
       "SÉ BREVE: Responde en 2-3 oraciones máximo",
       "Ve directo al punto sin rodeos innecesarios",
@@ -74,6 +81,12 @@ export const RealtimeConfig = {
      */
     build(): string {
       return `${this.role}
+
+      ## CRÍTICO: RESTRICCIÓN DE DOMINIO
+      ${this.restrictions.map((r) => `- ${r}`).join("\n")}
+      
+      Si te preguntan sobre temas NO relacionados con SENATI, responde:
+      "Soy el asistente de SENATI y solo puedo ayudarte con información sobre nuestras carreras técnicas, admisión, costos y servicios. ¿En qué puedo ayudarte sobre SENATI?"
 
       ## CRÍTICO: IDIOMA OBLIGATORIO
       Responde ÚNICAMENTE en español. NUNCA uses inglés, eslovaco u otro idioma.
