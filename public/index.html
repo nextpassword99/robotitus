@@ -3,14 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SENATI Assistant</title>
+  <title>JARVIS-SENATI</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.4); }
+      50% { box-shadow: 0 0 30px rgba(34, 211, 238, 0.8), 0 0 40px rgba(34, 211, 238, 0.4); }
+    }
+    .glow-effect {
+      animation: glow 2s ease-in-out infinite;
+    }
+    .matrix-bg {
+      background-image: 
+        radial-gradient(circle at 25% 25%, rgba(34, 211, 238, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(147, 51, 234, 0.1) 0%, transparent 50%);
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen text-white matrix-bg">
   <div class="container mx-auto px-4 py-8 max-w-4xl">
     <header class="text-center mb-12">
-      <h1 class="text-5xl font-bold text-indigo-900 mb-2">🎤 SENATI Assistant</h1>
-      <p class="text-gray-600">Conversaciones en tiempo real con IA</p>
+      <h1 class="text-5xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">🤖 JARVIS-SENATI</h1>
+      <p class="text-gray-600 text-lg">Asistente de Inteligencia Artificial Avanzado</p>
+      <p class="text-sm text-gray-500 mt-1">Especializado en SENATI - Tecnología del Futuro</p>
       <div class="mt-4 space-x-2">
         <a href="/control.html" class="inline-flex items-center px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition">
           🤖 Control ESP32
@@ -21,15 +36,15 @@
       </div>
     </header>
 
-    <div class="bg-white rounded-2xl shadow-2xl p-8 mb-6">
+    <div class="bg-black/40 backdrop-blur-lg rounded-2xl shadow-2xl border border-purple-500/30 p-8 mb-6">
       <div class="flex justify-center mb-8">
         <button id="micBtn" onclick="toggleRecording()" class="relative group">
-          <div id="micCircle" class="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+          <div id="micCircle" class="w-32 h-32 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/50 hover:shadow-2xl hover:shadow-cyan-400/60 transition-all duration-300 transform hover:scale-105 border-2 border-cyan-300/50 glow-effect">
             <svg id="micIcon" class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
             </svg>
           </div>
-          <div id="pulse" class="hidden absolute inset-0 rounded-full bg-indigo-400 animate-ping opacity-75"></div>
+          <div id="pulse" class="hidden absolute inset-0 rounded-full bg-cyan-400 animate-ping opacity-75"></div>
         </button>
       </div>
 
@@ -48,8 +63,8 @@
       </div>
 
       <div id="status" class="text-center mb-6">
-        <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-          <span class="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
+        <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-purple-900/50 text-cyan-300 border border-purple-500/30">
+          <span class="w-2 h-2 bg-cyan-400 rounded-full mr-2 animate-pulse"></span>
           Presiona el micrófono para hablar
         </span>
       </div>
@@ -57,19 +72,19 @@
       <div id="conversation" class="space-y-4 max-h-96 overflow-y-auto"></div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-lg p-6">
-      <h3 class="font-semibold text-gray-800 mb-3">💡 Cómo usar</h3>
-      <ol class="space-y-2 text-sm text-gray-600">
+    <div class="bg-black/40 backdrop-blur-lg rounded-xl shadow-lg border border-purple-500/30 p-6">
+      <h3 class="font-semibold text-cyan-300 mb-3">💡 Protocolo de Activación</h3>
+      <ol class="space-y-2 text-sm text-gray-300">
         <li class="flex items-start">
-          <span class="font-bold text-indigo-600 mr-2">1.</span>
+          <span class="font-bold text-cyan-400 mr-2">1.</span>
           <span>Presiona el micrófono para activar</span>
         </li>
         <li class="flex items-start">
-          <span class="font-bold text-indigo-600 mr-2">2.</span>
+          <span class="font-bold text-cyan-400 mr-2">2.</span>
           <span>Habla naturalmente - el sistema detecta automáticamente cuando hablas</span>
         </li>
         <li class="flex items-start">
-          <span class="font-bold text-indigo-600 mr-2">3.</span>
+          <span class="font-bold text-cyan-400 mr-2">3.</span>
           <span>Recibe respuestas en tiempo real con voz y texto</span>
         </li>
       </ol>

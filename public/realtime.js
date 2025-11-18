@@ -271,22 +271,24 @@ function handleServerEvent(event) {
       break;
 
     case "response.audio_transcript.delta":
-      // Solo procesar si es una nueva respuesta o continuación de la actual
-      if (event.response_id && event.response_id !== currentResponseId) {
-        currentResponseId = event.response_id;
-        lastAssistantMessage = null; // Reset para nueva respuesta
-      }
-      if (event.delta && !isProcessingResponse) {
+      // Procesar deltas de transcripción en tiempo real
+      if (event.delta) {
+        // Si es una nueva respuesta, resetear
+        if (event.response_id && event.response_id !== currentResponseId) {
+          currentResponseId = event.response_id;
+          lastAssistantMessage = null;
+          isProcessingResponse = true;
+        }
         addMessage("assistant", event.delta, true);
       }
       break;
 
     case "response.audio_transcript.done":
-      // Solo procesar si no hemos procesado ya esta respuesta completa
-      if (event.transcript && event.response_id !== currentResponseId) {
+      // Finalizar la transcripción - no agregar mensaje duplicado
+      if (event.response_id) {
         currentResponseId = event.response_id;
-        lastAssistantMessage = null;
-        addMessage("assistant", event.transcript);
+        isProcessingResponse = false;
+        // No agregar mensaje aquí porque ya se construyó con los deltas
       }
       break;
 
@@ -346,13 +348,13 @@ async function toggleRecording() {
 function updateStatus(text, type) {
   const status = document.getElementById("status");
   const colors = {
-    success: "bg-green-100 text-green-800",
-    listening: "bg-blue-100 text-blue-800",
-    processing: "bg-yellow-100 text-yellow-800",
-    error: "bg-red-100 text-red-800",
+    success: "bg-green-900/50 text-green-300 border border-green-500/30",
+    listening: "bg-cyan-900/50 text-cyan-300 border border-cyan-500/30",
+    processing: "bg-yellow-900/50 text-yellow-300 border border-yellow-500/30",
+    error: "bg-red-900/50 text-red-300 border border-red-500/30",
   };
   status.innerHTML = `
-    <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
+    <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm ${
       colors[type] || colors.success
     }">
       <span class="w-2 h-2 bg-current rounded-full mr-2 animate-pulse"></span>
@@ -366,52 +368,57 @@ function addMessage(role, text, isPartial = false) {
   if (!text || text.trim() === "") return;
 
   if (role === "assistant" && isPartial) {
-    isProcessingResponse = true;
+    // Crear o actualizar mensaje parcial del asistente
     if (!lastAssistantMessage) {
       lastAssistantMessage = document.createElement("div");
       lastAssistantMessage.className = "flex items-start space-x-3 mb-4";
       lastAssistantMessage.innerHTML = `
-        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/50 border border-cyan-400/50">
           <span class="text-white text-sm">🤖</span>
         </div>
-        <div class="flex-1 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl rounded-tl-none p-4">
-          <p class="text-gray-800"></p>
+        <div class="flex-1 bg-gradient-to-r from-slate-800/80 to-purple-900/80 backdrop-blur-sm rounded-2xl rounded-tl-none p-4 shadow-sm border border-cyan-500/30">
+          <p class="text-cyan-100 font-medium"></p>
         </div>
       `;
       conversation.appendChild(lastAssistantMessage);
     }
+    
+    // Actualizar el contenido del mensaje parcial
     const textElement = lastAssistantMessage.querySelector("p");
     textElement.textContent += text;
+    
   } else {
-    // Solo crear nuevo mensaje si no estamos en modo parcial
-    if (!isProcessingResponse) {
-      const messageDiv = document.createElement("div");
-      messageDiv.className =
-        role === "user"
-          ? "flex items-start space-x-3 justify-end mb-4"
-          : "flex items-start space-x-3 mb-4";
-      messageDiv.innerHTML =
-        role === "user"
-          ? `
-          <div class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-none p-4 max-w-md ml-auto">
-            <p>${escapeHtml(text)}</p>
+    // Crear mensaje completo (usuario o asistente final)
+    lastAssistantMessage = null; // Reset para próximo mensaje
+    
+    const messageDiv = document.createElement("div");
+    messageDiv.className =
+      role === "user"
+        ? "flex items-start space-x-3 justify-end mb-4"
+        : "flex items-start space-x-3 mb-4";
+        
+    messageDiv.innerHTML =
+      role === "user"
+        ? `
+          <div class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl rounded-tr-none p-4 max-w-md ml-auto shadow-lg border border-blue-400/50">
+            <p class="font-medium">${escapeHtml(text)}</p>
           </div>
-          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg border border-blue-400/50">
             <span class="text-white text-sm">👤</span>
           </div>
         `
-          : `
-          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+        : `
+          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/50 border border-cyan-400/50">
             <span class="text-white text-sm">🤖</span>
           </div>
-          <div class="flex-1 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl rounded-tl-none p-4">
-            <p class="text-gray-800">${escapeHtml(text)}</p>
+          <div class="flex-1 bg-gradient-to-r from-slate-800/80 to-purple-900/80 backdrop-blur-sm rounded-2xl rounded-tl-none p-4 shadow-sm border border-cyan-500/30">
+            <p class="text-cyan-100 font-medium">${escapeHtml(text)}</p>
           </div>
         `;
-      conversation.appendChild(messageDiv);
-    }
+    conversation.appendChild(messageDiv);
   }
 
+  // Auto-scroll al final
   conversation.scrollTop = conversation.scrollHeight;
 }
 
