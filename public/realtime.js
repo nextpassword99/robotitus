@@ -5,8 +5,6 @@ let micStream = null;
 let isConnected = false;
 let lastAssistantMessage = null;
 let currentResponseId = null;
-let isProcessingResponse = false;
-let currentTranscript = '';
 let audioActivated = false;
 let dummyAudioContext = null;
 
@@ -15,12 +13,9 @@ let dummyAudioContext = null;
   const res = await fetch("/api/config");
   serverConfig = await res.json();
   console.log("✅ Configuración cargada");
-  
-  // Detectar si es móvil y mostrar aviso de activación de audio
   checkMobileAudio();
 })();
 
-// Detectar móvil y preparar activación de audio
 function checkMobileAudio() {
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   
@@ -30,7 +25,6 @@ function checkMobileAudio() {
     
     if (warningDiv && activateBtn) {
       warningDiv.classList.remove('hidden');
-      
       activateBtn.addEventListener('click', () => {
         activateAudio();
         warningDiv.classList.add('hidden');
@@ -39,18 +33,14 @@ function checkMobileAudio() {
   }
 }
 
-// Activar audio para Bluetooth (requerido por navegadores móviles)
 function activateAudio() {
   if (audioActivated) return;
   
   try {
-    // Crear un AudioContext dummy que se activa con interacción del usuario
     dummyAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-    
-    // Reproducir un silencio breve para "desbloquear" el audio
     const oscillator = dummyAudioContext.createOscillator();
     const gainNode = dummyAudioContext.createGain();
-    gainNode.gain.value = 0.001; // Volumen muy bajo
+    gainNode.gain.value = 0.001;
     oscillator.connect(gainNode);
     gainNode.connect(dummyAudioContext.destination);
     oscillator.start();
@@ -58,28 +48,10 @@ function activateAudio() {
     
     audioActivated = true;
     console.log('✅ Audio activado para Bluetooth');
-    
-    // Mostrar confirmación visual
-    const statusDiv = document.getElementById('status');
-    if (statusDiv) {
-      statusDiv.innerHTML = `
-        <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
-          <span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-          Audio activado - Presiona el micrófono para hablar
-        </span>
-      `;
-    }
   } catch (error) {
     console.error('Error activando audio:', error);
   }
 }
-
-// Cargar config al inicio
-(async () => {
-  const res = await fetch("/api/config");
-  serverConfig = await res.json();
-  console.log("✅ Configuración cargada");
-})();
 
 async function connectRealtime() {
   try {
@@ -105,56 +77,18 @@ async function connectRealtime() {
 
     pc = new RTCPeerConnection();
 
-    // Crear elemento de audio con configuración optimizada para Bluetooth móvil
     const audioEl = document.createElement("audio");
     audioEl.autoplay = true;
-    audioEl.playsInline = true; // Crítico para iOS
-    audioEl.controls = false; // Ocultar controles pero mantener funcionalidad
-    audioEl.volume = 1.0; // Volumen máximo
+    audioEl.playsInline = true;
+    audioEl.controls = false;
+    audioEl.volume = 1.0;
     audioEl.style.display = "none";
-    
-    // Configurar para salida de audio Bluetooth
-    if (audioEl.setSinkId) {
-      // Intentar usar el dispositivo de audio predeterminado
-      navigator.mediaDevices.enumerateDevices()
-        .then(devices => {
-          const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
-          console.log('📱 Dispositivos de audio disponibles:', audioOutputs.length);
-          audioOutputs.forEach(d => console.log(`  - ${d.label || 'Desconocido'} (${d.deviceId})`));
-        })
-        .catch(err => console.warn('No se pudieron enumerar dispositivos:', err));
-    }
-    
     document.body.appendChild(audioEl);
     
     pc.ontrack = (e) => {
       console.log("🔊 Audio remoto recibido");
       audioEl.srcObject = e.streams[0];
-      
-      // Forzar reproducción con múltiples intentos
-      const playAudio = () => {
-        audioEl.play()
-          .then(() => {
-            console.log('✅ Audio reproduciéndose correctamente');
-            // Verificar que realmente esté sonando
-            if (audioEl.paused) {
-              console.warn('⚠️ Audio pausado inesperadamente, reintentando...');
-              setTimeout(playAudio, 100);
-            }
-          })
-          .catch(err => {
-            console.error("❌ Error reproduciendo audio:", err);
-            // Reintentar en caso de error (común en móviles)
-            setTimeout(playAudio, 200);
-          });
-      };
-      
-      playAudio();
-      
-      // Monitorear estado del audio
-      audioEl.onplaying = () => console.log('🎵 Audio playing');
-      audioEl.onpause = () => console.warn('⏸️ Audio pausado');
-      audioEl.onerror = (err) => console.error('❌ Error en elemento audio:', err);
+      audioEl.play().catch(err => console.error("Error reproduciendo audio:", err));
     };
 
     dc = pc.createDataChannel("oai-events");
@@ -227,10 +161,6 @@ function sendSessionUpdate() {
     },
   };
 
-  if (realtime.transcription.enabled) {
-    session.input_audio_transcription = { model: realtime.transcription.model };
-  }
-
   const event = {
     type: "session.update",
     session: session,
@@ -274,52 +204,47 @@ function handleServerEvent(event) {
       console.log("✅ Audio completo");
       break;
 
-    case "response.audio_transcript.delta":
-      // Acumular deltas de transcripción
-      if (event.delta) {
-        // Si es una nueva respuesta, resetear
-        if (event.response_id && event.response_id !== currentResponseId) {
-          currentResponseId = event.response_id;
-          lastAssistantMessage = null;
-          currentTranscript = '';
-          isProcessingResponse = true;
-        }
-        
-        // Acumular el texto completo
-        currentTranscript += event.delta;
-        
-        // Actualizar la burbuja con el texto completo acumulado
-        updateAssistantMessage(currentTranscript);
-      }
-      break;
-
     case "response.audio_transcript.done":
-      // Finalizar con el texto completo
-      if (event.transcript && event.response_id === currentResponseId) {
-        // Usar el texto completo final si está disponible
-        updateAssistantMessage(event.transcript);
-        currentTranscript = '';
-        isProcessingResponse = false;
+      if (event.transcript) {
+        // Solo mostrar el texto completo final
+        showAssistantMessage(event.transcript);
       }
       break;
 
     case "response.done":
       console.log("🏁 Respuesta completa:", event.response);
-      isProcessingResponse = false;
       lastAssistantMessage = null;
-      currentTranscript = '';
+      currentResponseId = null;
       updateStatus(statusMessages.ready, "success");
       break;
 
     case "error":
       console.error("Error:", event.error);
-      isProcessingResponse = false;
       updateStatus(
         `${statusMessages.error}: ${event.error?.message || "Desconocido"}`,
         "error"
       );
       break;
   }
+}
+
+function showAssistantMessage(text) {
+  const conversation = document.getElementById("conversation");
+  if (!text || text.trim() === "") return;
+
+  // Crear nueva burbuja para cada respuesta completa
+  const messageDiv = document.createElement("div");
+  messageDiv.className = "flex items-start space-x-3 mb-4";
+  messageDiv.innerHTML = `
+    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/50 border border-cyan-400/50">
+      <span class="text-white text-sm">🤖</span>
+    </div>
+    <div class="flex-1 bg-gradient-to-r from-slate-800/80 to-purple-900/80 backdrop-blur-sm rounded-2xl rounded-tl-none p-4 shadow-sm border border-cyan-500/30">
+      <p class="text-cyan-100 font-medium">${escapeHtml(text)}</p>
+    </div>
+  `;
+  conversation.appendChild(messageDiv);
+  conversation.scrollTop = conversation.scrollHeight;
 }
 
 function cleanup() {
@@ -336,23 +261,18 @@ function cleanup() {
 }
 
 async function toggleRecording() {
-  // Activar audio automáticamente al primer clic (crítico para móviles)
   if (!audioActivated) {
     activateAudio();
   }
   
   if (!isConnected) {
     await connectRealtime();
-    document
-      .getElementById("micCircle")
-      .classList.add("scale-110", "shadow-2xl");
+    document.getElementById("micCircle").classList.add("scale-110", "shadow-2xl");
     document.getElementById("pulse").classList.remove("hidden");
   } else {
     cleanup();
     updateStatus(serverConfig.realtime.statusMessages.disconnected, "error");
-    document
-      .getElementById("micCircle")
-      .classList.remove("scale-110", "shadow-2xl");
+    document.getElementById("micCircle").classList.remove("scale-110", "shadow-2xl");
     document.getElementById("pulse").classList.add("hidden");
   }
 }
@@ -375,39 +295,10 @@ function updateStatus(text, type) {
   `;
 }
 
-// Nueva función para actualizar mensajes del asistente
-function updateAssistantMessage(fullText) {
-  const conversation = document.getElementById("conversation");
-  if (!fullText || fullText.trim() === "") return;
-
-  // Crear mensaje del asistente si no existe
-  if (!lastAssistantMessage) {
-    lastAssistantMessage = document.createElement("div");
-    lastAssistantMessage.className = "flex items-start space-x-3 mb-4";
-    lastAssistantMessage.innerHTML = `
-      <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/50 border border-cyan-400/50">
-        <span class="text-white text-sm">🤖</span>
-      </div>
-      <div class="flex-1 bg-gradient-to-r from-slate-800/80 to-purple-900/80 backdrop-blur-sm rounded-2xl rounded-tl-none p-4 shadow-sm border border-cyan-500/30">
-        <p class="text-cyan-100 font-medium"></p>
-      </div>
-    `;
-    conversation.appendChild(lastAssistantMessage);
-  }
-  
-  // Actualizar con el texto completo (no concatenar)
-  const textElement = lastAssistantMessage.querySelector("p");
-  textElement.textContent = fullText;
-  
-  // Auto-scroll al final
-  conversation.scrollTop = conversation.scrollHeight;
-}
-
-function addMessage(role, text, isPartial = false) {
+function addMessage(role, text) {
   const conversation = document.getElementById("conversation");
   if (!text || text.trim() === "") return;
 
-  // Solo para mensajes de usuario o mensajes completos del asistente
   if (role === "user") {
     const messageDiv = document.createElement("div");
     messageDiv.className = "flex items-start space-x-3 justify-end mb-4";
@@ -420,8 +311,6 @@ function addMessage(role, text, isPartial = false) {
       </div>
     `;
     conversation.appendChild(messageDiv);
-    
-    // Auto-scroll al final
     conversation.scrollTop = conversation.scrollHeight;
   }
 }

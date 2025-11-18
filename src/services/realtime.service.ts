@@ -33,6 +33,14 @@ export class RealtimeService {
         console.log('📩 OpenAI:', event.type);
       }
       
+      // Log mensajes de transcripción para referencia
+      if (event.type === 'response.audio_transcript.done' && event.transcript) {
+        console.log('🤖 JARVIS:', event.transcript);
+      }
+      if (event.type === 'conversation.item.input_audio_transcription.completed' && event.transcript) {
+        console.log('👤 Usuario:', event.transcript);
+      }
+      
       if (event.type === 'session.created' && !this.sessionReady) {
         this.sessionReady = true;
         this.sendSessionUpdate();
@@ -130,13 +138,14 @@ export class RealtimeService {
     
     const { item_id, call_id, name, arguments: argsStr } = event;
     
-    if (RealtimeConfig.logging.logFunctionCalls) {
-      console.log(`🔧 Function call: ${name}`);
-    }
+    console.log(`🔧 JARVIS usando herramienta: ${name}`);
     
     try {
       const args = JSON.parse(argsStr);
+      console.log(`📝 Argumentos:`, args);
+      
       const result = await this.mcpService.executeTool(name, args);
+      console.log(`✅ Resultado de ${name}:`, result?.substring(0, 200) + '...');
       
       // Enviar resultado a OpenAI
       const outputEvent = {

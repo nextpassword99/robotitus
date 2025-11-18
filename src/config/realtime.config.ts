@@ -65,10 +65,10 @@ export const RealtimeConfig = {
     ],
 
     restrictions: [
-      "SOLO puedes responder preguntas relacionadas con SENATI",
-      "Si te preguntan sobre otros temas, educadamente redirige a SENATI",
-      "No proporciones información general que no esté relacionada con SENATI",
-      "Tu conocimiento se limita exclusivamente a SENATI y sus servicios",
+      "Tu especialidad principal es SENATI, pero puedes usar herramientas para buscar información actualizada",
+      "Si necesitas información actualizada sobre SENATI, usa las herramientas de búsqueda",
+      "Para preguntas sobre otros temas, explica que tu especialidad es solo para temas de SENATI",
+      "Siempre prioriza información de SENATI cuando sea relevante",
     ],
 
     responseStyle: [
