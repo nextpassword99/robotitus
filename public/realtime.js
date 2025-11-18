@@ -4,6 +4,8 @@ let dc = null;
 let micStream = null;
 let isConnected = false;
 let lastAssistantMessage = null;
+let currentResponseId = null;
+let isProcessingResponse = false;
 let audioActivated = false;
 let dummyAudioContext = null;
 
@@ -269,20 +271,35 @@ function handleServerEvent(event) {
       break;
 
     case "response.audio_transcript.delta":
-      if (event.delta) addMessage("assistant", event.delta, true);
+      // Solo procesar si es una nueva respuesta o continuación de la actual
+      if (event.response_id && event.response_id !== currentResponseId) {
+        currentResponseId = event.response_id;
+        lastAssistantMessage = null; // Reset para nueva respuesta
+      }
+      if (event.delta && !isProcessingResponse) {
+        addMessage("assistant", event.delta, true);
+      }
       break;
 
     case "response.audio_transcript.done":
-      if (event.transcript) addMessage("assistant", event.transcript);
+      // Solo procesar si no hemos procesado ya esta respuesta completa
+      if (event.transcript && event.response_id !== currentResponseId) {
+        currentResponseId = event.response_id;
+        lastAssistantMessage = null;
+        addMessage("assistant", event.transcript);
+      }
       break;
 
     case "response.done":
       console.log("🏁 Respuesta completa:", event.response);
+      isProcessingResponse = false;
+      lastAssistantMessage = null;
       updateStatus(statusMessages.ready, "success");
       break;
 
     case "error":
       console.error("Error:", event.error);
+      isProcessingResponse = false;
       updateStatus(
         `${statusMessages.error}: ${event.error?.message || "Desconocido"}`,
         "error"
@@ -349,9 +366,10 @@ function addMessage(role, text, isPartial = false) {
   if (!text || text.trim() === "") return;
 
   if (role === "assistant" && isPartial) {
+    isProcessingResponse = true;
     if (!lastAssistantMessage) {
       lastAssistantMessage = document.createElement("div");
-      lastAssistantMessage.className = "flex items-start space-x-3";
+      lastAssistantMessage.className = "flex items-start space-x-3 mb-4";
       lastAssistantMessage.innerHTML = `
         <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
           <span class="text-white text-sm">🤖</span>
@@ -362,33 +380,36 @@ function addMessage(role, text, isPartial = false) {
       `;
       conversation.appendChild(lastAssistantMessage);
     }
-    lastAssistantMessage.querySelector("p").textContent += text;
+    const textElement = lastAssistantMessage.querySelector("p");
+    textElement.textContent += text;
   } else {
-    lastAssistantMessage = null;
-    const messageDiv = document.createElement("div");
-    messageDiv.className =
-      role === "user"
-        ? "flex items-start space-x-3 justify-end mb-4"
-        : "flex items-start space-x-3 mb-4";
-    messageDiv.innerHTML =
-      role === "user"
-        ? `
-        <div class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-none p-4 max-w-md ml-auto">
-          <p>${escapeHtml(text)}</p>
-        </div>
-        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-          <span class="text-white text-sm">👤</span>
-        </div>
-      `
-        : `
-        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-          <span class="text-white text-sm">🤖</span>
-        </div>
-        <div class="flex-1 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl rounded-tl-none p-4">
-          <p class="text-gray-800">${escapeHtml(text)}</p>
-        </div>
-      `;
-    conversation.appendChild(messageDiv);
+    // Solo crear nuevo mensaje si no estamos en modo parcial
+    if (!isProcessingResponse) {
+      const messageDiv = document.createElement("div");
+      messageDiv.className =
+        role === "user"
+          ? "flex items-start space-x-3 justify-end mb-4"
+          : "flex items-start space-x-3 mb-4";
+      messageDiv.innerHTML =
+        role === "user"
+          ? `
+          <div class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-none p-4 max-w-md ml-auto">
+            <p>${escapeHtml(text)}</p>
+          </div>
+          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+            <span class="text-white text-sm">👤</span>
+          </div>
+        `
+          : `
+          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <span class="text-white text-sm">🤖</span>
+          </div>
+          <div class="flex-1 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl rounded-tl-none p-4">
+            <p class="text-gray-800">${escapeHtml(text)}</p>
+          </div>
+        `;
+      conversation.appendChild(messageDiv);
+    }
   }
 
   conversation.scrollTop = conversation.scrollHeight;

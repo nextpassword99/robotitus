@@ -44,7 +44,8 @@ export class RealtimeService {
         return;
       }
       
-      if (this.clientWs?.readyState === WebSocket.OPEN) {
+      // Filtrar eventos duplicados o problemáticos
+      if (this.shouldForwardEvent(event) && this.clientWs?.readyState === WebSocket.OPEN) {
         this.clientWs.send(message);
       }
     });
@@ -102,6 +103,26 @@ export class RealtimeService {
     }
     
     this.openaiWs?.send(JSON.stringify(event));
+  }
+
+  private shouldForwardEvent(event: any): boolean {
+    // Lista de eventos que deben ser enviados al cliente
+    const allowedEvents = [
+      'session.created',
+      'session.updated', 
+      'input_audio_buffer.speech_started',
+      'input_audio_buffer.speech_stopped',
+      'conversation.item.input_audio_transcription.completed',
+      'conversation.item.input_audio_transcription.failed',
+      'response.audio.delta',
+      'response.audio.done',
+      'response.audio_transcript.delta',
+      'response.audio_transcript.done',
+      'response.done',
+      'error'
+    ];
+    
+    return allowedEvents.includes(event.type);
   }
 
   private async handleFunctionCall(event: any) {
