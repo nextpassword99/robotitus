@@ -36,7 +36,7 @@ export const RealtimeConfig = {
    * Configuración de transcripción
    */
   transcription: {
-    enabled: false, // Deshabilitado por rate limits de Whisper
+    enabled: true, // Habilitado para mostrar texto en burbujas
     model: "whisper-1",
   },
 

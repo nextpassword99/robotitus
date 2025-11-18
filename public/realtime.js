@@ -6,6 +6,7 @@ let isConnected = false;
 let lastAssistantMessage = null;
 let currentResponseId = null;
 let isProcessingResponse = false;
+let currentTranscript = '';
 let audioActivated = false;
 let dummyAudioContext = null;
 
@@ -215,6 +216,9 @@ function sendSessionUpdate() {
     voice: realtime.voice,
     input_audio_format: realtime.audio.inputFormat,
     output_audio_format: realtime.audio.outputFormat,
+    input_audio_transcription: realtime.transcription.enabled 
+      ? { model: realtime.transcription.model } 
+      : null,
     turn_detection: {
       type: realtime.vad.type,
       threshold: realtime.vad.threshold,
@@ -271,24 +275,31 @@ function handleServerEvent(event) {
       break;
 
     case "response.audio_transcript.delta":
-      // Procesar deltas de transcripción en tiempo real
+      // Acumular deltas de transcripción
       if (event.delta) {
         // Si es una nueva respuesta, resetear
         if (event.response_id && event.response_id !== currentResponseId) {
           currentResponseId = event.response_id;
           lastAssistantMessage = null;
+          currentTranscript = '';
           isProcessingResponse = true;
         }
-        addMessage("assistant", event.delta, true);
+        
+        // Acumular el texto completo
+        currentTranscript += event.delta;
+        
+        // Actualizar la burbuja con el texto completo acumulado
+        updateAssistantMessage(currentTranscript);
       }
       break;
 
     case "response.audio_transcript.done":
-      // Finalizar la transcripción - no agregar mensaje duplicado
-      if (event.response_id) {
-        currentResponseId = event.response_id;
+      // Finalizar con el texto completo
+      if (event.transcript && event.response_id === currentResponseId) {
+        // Usar el texto completo final si está disponible
+        updateAssistantMessage(event.transcript);
+        currentTranscript = '';
         isProcessingResponse = false;
-        // No agregar mensaje aquí porque ya se construyó con los deltas
       }
       break;
 
@@ -296,6 +307,7 @@ function handleServerEvent(event) {
       console.log("🏁 Respuesta completa:", event.response);
       isProcessingResponse = false;
       lastAssistantMessage = null;
+      currentTranscript = '';
       updateStatus(statusMessages.ready, "success");
       break;
 
@@ -363,63 +375,55 @@ function updateStatus(text, type) {
   `;
 }
 
+// Nueva función para actualizar mensajes del asistente
+function updateAssistantMessage(fullText) {
+  const conversation = document.getElementById("conversation");
+  if (!fullText || fullText.trim() === "") return;
+
+  // Crear mensaje del asistente si no existe
+  if (!lastAssistantMessage) {
+    lastAssistantMessage = document.createElement("div");
+    lastAssistantMessage.className = "flex items-start space-x-3 mb-4";
+    lastAssistantMessage.innerHTML = `
+      <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/50 border border-cyan-400/50">
+        <span class="text-white text-sm">🤖</span>
+      </div>
+      <div class="flex-1 bg-gradient-to-r from-slate-800/80 to-purple-900/80 backdrop-blur-sm rounded-2xl rounded-tl-none p-4 shadow-sm border border-cyan-500/30">
+        <p class="text-cyan-100 font-medium"></p>
+      </div>
+    `;
+    conversation.appendChild(lastAssistantMessage);
+  }
+  
+  // Actualizar con el texto completo (no concatenar)
+  const textElement = lastAssistantMessage.querySelector("p");
+  textElement.textContent = fullText;
+  
+  // Auto-scroll al final
+  conversation.scrollTop = conversation.scrollHeight;
+}
+
 function addMessage(role, text, isPartial = false) {
   const conversation = document.getElementById("conversation");
   if (!text || text.trim() === "") return;
 
-  if (role === "assistant" && isPartial) {
-    // Crear o actualizar mensaje parcial del asistente
-    if (!lastAssistantMessage) {
-      lastAssistantMessage = document.createElement("div");
-      lastAssistantMessage.className = "flex items-start space-x-3 mb-4";
-      lastAssistantMessage.innerHTML = `
-        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/50 border border-cyan-400/50">
-          <span class="text-white text-sm">🤖</span>
-        </div>
-        <div class="flex-1 bg-gradient-to-r from-slate-800/80 to-purple-900/80 backdrop-blur-sm rounded-2xl rounded-tl-none p-4 shadow-sm border border-cyan-500/30">
-          <p class="text-cyan-100 font-medium"></p>
-        </div>
-      `;
-      conversation.appendChild(lastAssistantMessage);
-    }
-    
-    // Actualizar el contenido del mensaje parcial
-    const textElement = lastAssistantMessage.querySelector("p");
-    textElement.textContent += text;
-    
-  } else {
-    // Crear mensaje completo (usuario o asistente final)
-    lastAssistantMessage = null; // Reset para próximo mensaje
-    
+  // Solo para mensajes de usuario o mensajes completos del asistente
+  if (role === "user") {
     const messageDiv = document.createElement("div");
-    messageDiv.className =
-      role === "user"
-        ? "flex items-start space-x-3 justify-end mb-4"
-        : "flex items-start space-x-3 mb-4";
-        
-    messageDiv.innerHTML =
-      role === "user"
-        ? `
-          <div class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl rounded-tr-none p-4 max-w-md ml-auto shadow-lg border border-blue-400/50">
-            <p class="font-medium">${escapeHtml(text)}</p>
-          </div>
-          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg border border-blue-400/50">
-            <span class="text-white text-sm">👤</span>
-          </div>
-        `
-        : `
-          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/50 border border-cyan-400/50">
-            <span class="text-white text-sm">🤖</span>
-          </div>
-          <div class="flex-1 bg-gradient-to-r from-slate-800/80 to-purple-900/80 backdrop-blur-sm rounded-2xl rounded-tl-none p-4 shadow-sm border border-cyan-500/30">
-            <p class="text-cyan-100 font-medium">${escapeHtml(text)}</p>
-          </div>
-        `;
+    messageDiv.className = "flex items-start space-x-3 justify-end mb-4";
+    messageDiv.innerHTML = `
+      <div class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl rounded-tr-none p-4 max-w-md ml-auto shadow-lg border border-blue-400/50">
+        <p class="font-medium">${escapeHtml(text)}</p>
+      </div>
+      <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg border border-blue-400/50">
+        <span class="text-white text-sm">👤</span>
+      </div>
+    `;
     conversation.appendChild(messageDiv);
+    
+    // Auto-scroll al final
+    conversation.scrollTop = conversation.scrollHeight;
   }
-
-  // Auto-scroll al final
-  conversation.scrollTop = conversation.scrollHeight;
 }
 
 function escapeHtml(text) {
