@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+  <title>JARVIS-SENATI - Rostro Interactivo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: #0a0a0a;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    #faceContainer {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #particlesCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.2;
+      pointer-events: none;
+    }
+
+    #faceCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Indicador de conexión */
+    #connectionStatus {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+      z-index: 10;
+    }
+
+    #connectionStatus.disconnected {
+      background: #ef4444;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    }
+
+    /* Botón de activación central */
+    #activateBtn {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #06b6d4, #3b82f6);
+      border: 3px solid rgba(6, 182, 212, 0.8);
+      color: white;
+      font-size: 36px;
+      cursor: pointer;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(6, 182, 212, 0.4);
+    }
+
+    #activateBtn:hover {
+      transform: translateX(-50%) scale(1.1);
+      box-shadow: 0 6px 30px rgba(6, 182, 212, 0.6);
+    }
+
+    #activateBtn.active {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-color: #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    #activateBtn.disabled {
+      background: linear-gradient(135deg, #6b7280, #4b5563);
+      border-color: #6b7280;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4); }
+      50% { box-shadow: 0 8px 40px rgba(16, 185, 129, 0.8); }
+    }
+
+    /* Botón de pantalla completa */
+    #fullscreenBtn {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.3);
+      border: 2px solid rgba(16, 185, 129, 0.6);
+      color: #10b981;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    #fullscreenBtn:hover {
+      background: rgba(16, 185, 129, 0.5);
+      transform: scale(1.1);
+    }
+
+    /* Status overlay */
+    #statusOverlay {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      color: #06b6d4;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    #statusDot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #06b6d4;
+      animation: blink 2s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Ocultar en pantalla completa */
+    :fullscreen #fullscreenBtn,
+    :-webkit-full-screen #fullscreenBtn,
+    :-moz-full-screen #fullscreenBtn,
+    :-ms-fullscreen #fullscreenBtn {
+      display: none;
+    }
+
+    /* Aviso de audio móvil */
+    #audioWarning {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 400px;
+      text-align: center;
+      z-index: 100;
+      border: 2px solid #f59e0b;
+      display: none;
+    }
+
+    #audioWarning.show {
+      display: block;
+    }
+
+    #audioWarning h3 {
+      color: #f59e0b;
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    #audioWarning p {
+      color: #e5e7eb;
+      margin-bottom: 20px;
+    }
+
+    #activateAudioBtn {
+      background: #f59e0b;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    #activateAudioBtn:hover {
+      background: #d97706;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <!-- Indicador de conexión -->
+  <div id="connectionStatus"></div>
+
+  <!-- Status overlay -->
+  <div id="statusOverlay">
+    <div id="statusDot"></div>
+    <span id="statusText">Di "leopardo" para activar</span>
+  </div>
+
+  <!-- Botón de activación/desactivación -->
+  <button id="activateBtn" title="Activar/Desactivar">🎤</button>
+
+  <!-- Botón de pantalla completa -->
+  <button id="fullscreenBtn" title="Pantalla completa">⛶</button>
+
+  <!-- Aviso de audio móvil -->
+  <div id="audioWarning">
+    <h3>🔊 Audio Requerido</h3>
+    <p>Activa el audio antes de usar el sistema</p>
+    <button id="activateAudioBtn">Activar Audio</button>
+  </div>
+
+  <!-- Contenedor del Rostro -->
+  <div id="faceContainer">
+    <!-- Partículas de fondo -->
+    <canvas id="particlesCanvas"></canvas>
+    
+    <!-- Canvas Principal -->
+    <canvas id="faceCanvas"></canvas>
+  </div>
+
+  <!-- Porcupine Wake Word Scripts -->
+  <script src="https://unpkg.com/@picovoice/porcupine-web@3.0.2/dist/iife/index.js"></script>
+  <script src="https://unpkg.com/@picovoice/web-voice-processor@4.0.9/dist/iife/index.js"></script>
+  
+  <!-- Configuración de mensajes de audio -->
+  <script src="/audio-messages.js"></script>
+  
+  <!-- Face.js con todas las funcionalidades integradas -->
+  <script>
+    // ============================================
+    // VARIABLES GLOBALES
+    // ============================================
+    
+    // Canvas y contexto
+    const canvas = document.getElementById('faceCanvas');
+    const ctx = canvas.getContext('2d');
+    const particlesCanvas = document.getElementById('particlesCanvas');
+    const pCtx = particlesCanvas.getContext('2d');
+
+    // Estado del rostro
+    let currentEmotion = 'idle';
+    let blinkTimer = 0;
+    let isBlinking = false;
+    let mouthAnimation = 0;
+    let particles = [];
+
+    // Estado de OpenAI Realtime
+    let serverConfig = null;
+    let pc = null;
+    let dc = null;
+    let micStream = null;
+    let isConnected = false;
+    let audioActivated = false;
+    let dummyAudioContext = null;
+    let inactivityTimeout = null;
+    let hasUserSpoken = false;
+
+    // Estado de Porcupine
+    let porcupineWorker = null;
+    let isListeningForWakeWord = false;
+    let wakeWordTimeout = null;
+    let isInitialized = false;
+    let porcupineConfig = null;
+
+    // ============================================
+    // COLORES Y EMOCIONES
+    // ============================================
+
+    const colors = {
+      primary: '#06b6d4',
+      secondary: '#8b5cf6',
+      accent: '#ec4899',
+      glow: 'rgba(6, 182, 212, 0.3)'
+    };
+
+    const emotions = {
+      idle: {
+        eyeHeight: 0.4,
+        eyeWidth: 0.35,
+        mouthCurve: 0,
+        eyeGlow: 0.5,
+        color: colors.primary,
+        mouthWidth: 0.25
+      },
+      happy: {
+        eyeHeight: 0.25,
+        eyeWidth: 0.35,
+        mouthCurve: 80,
+        eyeGlow: 1,
+        color: '#10b981',
+        mouthWidth: 0.35
+      },
+      thinking: {
+        eyeHeight: 0.35,
+        eyeWidth: 0.3,
+        mouthCurve: -30,
+        eyeGlow: 0.7,
+        color: '#f59e0b',
+        mouthWidth: 0.2
+      },
+      talking: {
+        eyeHeight: 0.4,
+        eyeWidth: 0.35,
+        mouthCurve: 0,
+        eyeGlow: 0.8,
+        color: colors.secondary,
+        mouthMovement: true,
+        mouthWidth: 0.3
+      },
+      listening: {
+        eyeHeight: 0.5,
+        eyeWidth: 0.4,
+        mouthCurve: 20,
+        eyeGlow: 1,
+        color: colors.primary,
+        pulse: true,
+        mouthWidth: 0.28
+      },
+      error: {
+        eyeHeight: 0.2,
+        eyeWidth: 0.25,
+        mouthCurve: -60,
+        eyeGlow: 0.3,
+        color: '#ef4444',
+        mouthWidth: 0.25
+      }
+    };
+
+    // ============================================
+    // FUNCIONES DE ROSTRO
+    // ============================================
+
+    function initParticles() {
+      particles = [];
+      for (let i = 0; i < 50; i++) {
+        particles.push({
+          x: Math.random() * particlesCanvas.width,
+          y: Math.random() * particlesCanvas.height,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5,
+          radius: Math.random() * 2 + 1,
+          opacity: Math.random() * 0.5
+        });
+      }
+    }
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      particlesCanvas.width = window.innerWidth;
+      particlesCanvas.height = window.innerHeight;
+      initParticles();
+    }
+
+    function animateParticles() {
+      pCtx.clearRect(0, 0, particlesCanvas.width, particlesCanvas.height);
+      
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        
+        if (p.x < 0 || p.x > particlesCanvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > particlesCanvas.height) p.vy *= -1;
+        
+        pCtx.beginPath();
+        pCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        pCtx.fillStyle = `rgba(6, 182, 212, ${p.opacity})`;
+        pCtx.fill();
+      });
+    }
+
+    function drawEye(x, y, size, heightFactor, widthFactor, color, glow) {
+      const eyeWidth = size * widthFactor;
+      const eyeHeight = size * heightFactor;
+      
+      if (!isBlinking) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = color;
+        
+        ctx.beginPath();
+        ctx.moveTo(x - eyeWidth * 1.1, y - eyeHeight * 1.1);
+        ctx.quadraticCurveTo(x, y - eyeHeight * 1.3, x + eyeWidth * 1.1, y - eyeHeight * 1.1);
+        ctx.stroke();
+        
+        ctx.shadowBlur = 0;
+      }
+      
+      if (glow > 0) {
+        ctx.shadowBlur = 50 * glow;
+        ctx.shadowColor = color;
+      }
+      
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.ellipse(x, y, eyeWidth, eyeHeight, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(x - eyeWidth * 0.25, y - eyeHeight * 0.25, eyeWidth * 0.35, eyeHeight * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.beginPath();
+      ctx.ellipse(x + eyeWidth * 0.3, y + eyeHeight * 0.2, eyeWidth * 0.15, eyeHeight * 0.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawMouth(x, y, width, curve, color, movement = 0) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 12;
+      ctx.lineCap = 'round';
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = color;
+      
+      ctx.beginPath();
+      ctx.moveTo(x - width / 2, y);
+      
+      const controlY = y + curve + movement;
+      ctx.quadraticCurveTo(x, controlY, x + width / 2, y);
+      ctx.stroke();
+      
+      ctx.globalAlpha = 0.3;
+      ctx.lineWidth = 16;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      
+      ctx.shadowBlur = 0;
+    }
+
+    function drawFace() {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const emotion = emotions[currentEmotion];
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(canvas.width, canvas.height));
+      gradient.addColorStop(0, '#0f172a');
+      gradient.addColorStop(1, '#020617');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.strokeStyle = emotion.color;
+      ctx.lineWidth = 8;
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = emotion.color;
+      ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+      ctx.shadowBlur = 0;
+      
+      if (emotion.pulse) {
+        const pulseAlpha = (Math.sin(Date.now() / 500) + 1) / 2;
+        ctx.strokeStyle = emotion.color;
+        ctx.lineWidth = 12;
+        ctx.globalAlpha = pulseAlpha * 0.5;
+        ctx.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+        ctx.globalAlpha = 1;
+      }
+      
+      const scale = Math.min(canvas.width, canvas.height) / 600;
+      const eyeSize = 100 * scale;
+      const eyeSpacing = 180 * scale;
+      const eyeY = centerY - 80 * scale;
+      
+      if (!isBlinking) {
+        drawEye(centerX - eyeSpacing, eyeY, eyeSize, emotion.eyeHeight, emotion.eyeWidth, emotion.color, emotion.eyeGlow);
+        drawEye(centerX + eyeSpacing, eyeY, eyeSize, emotion.eyeHeight, emotion.eyeWidth, emotion.color, emotion.eyeGlow);
+      } else {
+        ctx.strokeStyle = emotion.color;
+        ctx.lineWidth = 8 * scale;
+        ctx.lineCap = 'round';
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = emotion.color;
+        
+        const blinkWidth = eyeSize * emotion.eyeWidth * 1.2;
+        ctx.beginPath();
+        ctx.moveTo(centerX - eyeSpacing - blinkWidth, eyeY);
+        ctx.lineTo(centerX - eyeSpacing + blinkWidth, eyeY);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(centerX + eyeSpacing - blinkWidth, eyeY);
+        ctx.lineTo(centerX + eyeSpacing + blinkWidth, eyeY);
+        ctx.stroke();
+        
+        ctx.shadowBlur = 0;
+      }
+      
+      const mouthY = centerY + 120 * scale;
+      const mouthWidth = canvas.width * emotion.mouthWidth;
+      let mouthMovement = 0;
+      
+      if (emotion.mouthMovement) {
+        mouthMovement = Math.sin(mouthAnimation) * 30 * scale;
+      }
+      
+      drawMouth(centerX, mouthY, mouthWidth, emotion.mouthCurve * scale, emotion.color, mouthMovement);
+      
+      ctx.strokeStyle = emotion.color;
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.5;
+      
+      ctx.beginPath();
+      ctx.moveTo(30, 80);
+      ctx.lineTo(30, 30);
+      ctx.lineTo(80, 30);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(canvas.width - 30, 80);
+      ctx.lineTo(canvas.width - 30, 30);
+      ctx.lineTo(canvas.width - 80, 30);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(30, canvas.height - 80);
+      ctx.lineTo(30, canvas.height - 30);
+      ctx.lineTo(80, canvas.height - 30);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(canvas.width - 30, canvas.height - 80);
+      ctx.lineTo(canvas.width - 30, canvas.height - 30);
+      ctx.lineTo(canvas.width - 80, canvas.height - 30);
+      ctx.stroke();
+      
+      ctx.globalAlpha = 1;
+    }
+
+    function animate() {
+      blinkTimer++;
+      if (blinkTimer > 180 && Math.random() < 0.02) {
+        isBlinking = true;
+        setTimeout(() => isBlinking = false, 150);
+        blinkTimer = 0;
+      }
+      
+      mouthAnimation += 0.2;
+      
+      animateParticles();
+      drawFace();
+      
+      requestAnimationFrame(animate);
+    }
+
+    function setEmotion(emotion) {
+      if (emotions[emotion]) {
+        currentEmotion = emotion;
+        console.log(`😊 Emoción: ${emotion}`);
+      }
+    }
+
+    // ============================================
+    // FUNCIONES DE UI
+    // ============================================
+
+    function updateStatus(text, type = 'info') {
+      const statusText = document.getElementById('statusText');
+      const statusDot = document.getElementById('statusDot');
+      
+      statusText.textContent = text;
+      
+      // Cambiar color del dot según el tipo
+      const colors = {
+        info: '#06b6d4',
+        listening: '#10b981',
+        processing: '#f59e0b',
+        error: '#ef4444',
+        success: '#10b981'
+      };
+      
+      statusDot.style.background = colors[type] || colors.info;
+    }
+
+    function updateConnectionStatus(connected) {
+      const statusEl = document.getElementById('connectionStatus');
+      if (statusEl) {
+        if (connected) {
+          statusEl.classList.remove('disconnected');
+        } else {
+          statusEl.classList.add('disconnected');
+        }
+      }
+    }
+
+    function checkMobileAudio() {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        const warning = document.getElementById('audioWarning');
+        warning.classList.add('show');
+        
+        document.getElementById('activateAudioBtn').addEventListener('click', () => {
+          activateAudio();
+          warning.classList.remove('show');
+        });
+      }
+    }
+
+    function activateAudio() {
+      if (audioActivated) return;
+      
+      try {
+        dummyAudioContext = new (globalThis.AudioContext || globalThis.webkitAudioContext)();
+        const oscillator = dummyAudioContext.createOscillator();
+        const gainNode = dummyAudioContext.createGain();
+        gainNode.gain.value = 0.001;
+        oscillator.connect(gainNode);
+        gainNode.connect(dummyAudioContext.destination);
+        oscillator.start();
+        oscillator.stop(dummyAudioContext.currentTime + 0.1);
+        
+        audioActivated = true;
+        console.log('✅ Audio activado');
+      } catch (error) {
+        console.error('Error activando audio:', error);
+      }
+    }
+
+    // ============================================
+    // OPENAI REALTIME API
+    // ============================================
+
+    async function connectRealtime() {
+      try {
+        if (!serverConfig) {
+          const res = await fetch("/api/config");
+          serverConfig = await res.json();
+        }
+        const { realtime, openaiApiKey } = serverConfig;
+
+        updateStatus('Solicitando micrófono...', 'processing');
+        setEmotion('thinking');
+
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            sampleRate: realtime.audio.sampleRate,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+
+        updateStatus('Configurando conexión...', 'processing');
+
+        pc = new RTCPeerConnection();
+
+        const audioEl = document.createElement("audio");
+        audioEl.autoplay = true;
+        audioEl.playsInline = true;
+        audioEl.controls = false;
+        audioEl.volume = 1.0;
+        audioEl.style.display = "none";
+        document.body.appendChild(audioEl);
+        
+        pc.ontrack = (e) => {
+          console.log("🔊 Audio recibido");
+          audioEl.srcObject = e.streams[0];
+          audioEl.play().catch(err => console.error("Error reproduciendo audio:", err));
+        };
+
+        dc = pc.createDataChannel("oai-events");
+
+        dc.onopen = () => {
+          console.log("✅ Conectado");
+          sendSessionUpdate();
+        };
+
+        dc.onmessage = (e) => {
+          const event = JSON.parse(e.data);
+          handleServerEvent(event);
+        };
+
+        micStream.getTracks().forEach((track) => pc.addTrack(track, micStream));
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        updateStatus('Conectando con IA...', 'processing');
+
+        const response = await fetch(
+          `https://api.openai.com/v1/realtime?model=${realtime.model}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${openaiApiKey}`,
+              "Content-Type": "application/sdp",
+            },
+            body: offer.sdp,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${await response.text()}`);
+        }
+
+        const answer = {
+          type: "answer",
+          sdp: await response.text(),
+        };
+        await pc.setRemoteDescription(answer);
+
+        isConnected = true;
+        updateConnectionStatus(true);
+        updateStatus('✅ Conectado - Habla ahora', 'success');
+        
+        const btn = document.getElementById('activateBtn');
+        btn.classList.add('active');
+        btn.textContent = '🔴';
+        
+      } catch (error) {
+        console.error("❌ Error:", error);
+        updateStatus(`Error: ${error.message}`, 'error');
+        setEmotion('error');
+        cleanup();
+      }
+    }
+
+    function sendSessionUpdate() {
+      const { realtime } = serverConfig;
+
+      const session = {
+        modalities: realtime.modalities,
+        instructions: realtime.instructions,
+        voice: realtime.voice,
+        input_audio_format: realtime.audio.inputFormat,
+        output_audio_format: realtime.audio.outputFormat,
+        input_audio_transcription: realtime.transcription.enabled 
+          ? { model: realtime.transcription.model } 
+          : null,
+        turn_detection: {
+          type: realtime.vad.type,
+          threshold: realtime.vad.threshold,
+          prefix_padding_ms: realtime.vad.prefixPaddingMs,
+          silence_duration_ms: realtime.vad.silenceDurationMs,
+        },
+      };
+
+      const event = {
+        type: "session.update",
+        session: session,
+      };
+      
+      console.log("📤 Configuración enviada");
+      dc.send(JSON.stringify(event));
+    }
+
+    function handleServerEvent(event) {
+      console.log("📨", event.type);
+
+      switch (event.type) {
+        case "session.created":
+        case "session.updated":
+          updateStatus('Sistema listo - Habla ahora', 'success');
+          setEmotion('happy');
+          if (typeof playBeep === 'function') {
+            playBeep('ready');
+          }
+          break;
+
+        case "input_audio_buffer.speech_started":
+          updateStatus('Escuchando...', 'listening');
+          clearInactivityTimeout();
+          hasUserSpoken = true;
+          setEmotion('listening');
+          break;
+
+        case "input_audio_buffer.speech_stopped":
+          updateStatus('Procesando...', 'processing');
+          setEmotion('thinking');
+          break;
+
+        case "output_audio_buffer.stopped":
+          console.log("✅ Audio terminado");
+          setEmotion('idle');
+          startInactivityTimeout();
+          break;
+
+        case "response.audio.delta":
+          setEmotion('talking');
+          break;
+
+        case "response.done":
+          updateStatus('Listo - Puedes hablar', 'success');
+          break;
+
+        case "error":
+          console.error("Error:", event.error);
+          updateStatus(`Error: ${event.error?.message || "Desconocido"}`, 'error');
+          setEmotion('error');
+          if (typeof playBeep === 'function') {
+            playBeep('error');
+          }
+          break;
+      }
+    }
+
+    function startInactivityTimeout() {
+      clearInactivityTimeout();
+      hasUserSpoken = false;
+      
+      inactivityTimeout = setTimeout(() => {
+        if (!hasUserSpoken && isConnected) {
+          console.log('⏱️ Timeout - cerrando');
+          updateStatus('No detecté tu voz...', 'error');
+          
+          if (typeof playBeep === 'function') {
+            playBeep('deactivation');
+          }
+          
+          setTimeout(() => {
+            cleanup();
+          }, 1000);
+        }
+      }, 10000);
+    }
+
+    function clearInactivityTimeout() {
+      if (inactivityTimeout) {
+        clearTimeout(inactivityTimeout);
+        inactivityTimeout = null;
+      }
+    }
+
+    function cleanup() {
+      clearInactivityTimeout();
+      
+      if (micStream) {
+        micStream.getTracks().forEach((t) => t.stop());
+        micStream = null;
+      }
+      if (pc) {
+        pc.close();
+        pc = null;
+      }
+      dc = null;
+      isConnected = false;
+      hasUserSpoken = false;
+      updateConnectionStatus(false);
+      
+      setEmotion('idle');
+      
+      const btn = document.getElementById('activateBtn');
+      btn.classList.remove('active');
+      btn.textContent = '🎤';
+      
+      if (typeof startListeningForWakeWord === 'function') {
+        console.log('🔄 Volviendo a wake word...');
+        setTimeout(() => {
+          startListeningForWakeWord();
+        }, 1000);
+      }
+    }
+
+    // ============================================
+    // PORCUPINE WAKE WORD
+    // ============================================
+
+    async function loadPorcupineConfig() {
+      try {
+        const response = await fetch('/api/config');
+        if (!response.ok) { 
+          throw new Error(`Error cargando configuración: ${response.statusText}`);
+        }
+        const config = await response.json();
+        porcupineConfig = config.porcupine;
+        console.log('✅ Config Porcupine cargada');
+        return porcupineConfig;
+      } catch (error) {
+        console.error('❌ Error:', error);
+        throw error;
+      }
+    }
+
+    async function initPorcupine() {
+      if (isInitialized) {
+        console.log('⚠️ Ya inicializado');
+        return true;
+      }
+
+      if (!porcupineConfig) {
+        await loadPorcupineConfig();
+      }
+
+      const config = porcupineConfig;
+      
+      if (!config || !config.accessKey || config.accessKey === 'tu_porcupine_key_aqui') {
+        console.error('❌ Configura PORCUPINE_ACCESS_KEY en .env');
+        updateStatus('Error: Access Key no configurado', 'error');
+        return false;
+      }
+
+      try {
+        console.log('🎤 Inicializando Porcupine...');
+        
+        const keywords = config.keywords.map(kw => ({
+          publicPath: kw.publicPath,
+          label: kw.label,
+          sensitivity: kw.sensitivity || 0.7
+        }));
+
+        porcupineWorker = await globalThis.PorcupineWeb.PorcupineWorker.create(
+          config.accessKey,
+          keywords.map(k => ({ publicPath: k.publicPath, label: k.label })),
+          onWakeWordDetected,
+          { publicPath: config.modelPath }
+        );
+
+        isInitialized = true;
+        
+        console.log('✅ Porcupine OK');
+        console.log(`📋 Palabras: ${keywords.map(k => k.label).join(', ')}`);
+        
+        return true;
+      } catch (error) {
+        console.error('❌ Error Porcupine:', error);
+        updateStatus('Error inicializando wake word', 'error');
+        return false;
+      }
+    }
+
+    function onWakeWordDetected(detection) {
+      const timestamp = new Date().toLocaleTimeString();
+      
+      console.log('🎯 WAKE WORD!');
+      console.log(`   Palabra: "${detection.label}"`);
+      console.log(`   Hora: ${timestamp}`);
+      
+      stopListeningForWakeWord();
+
+      if (typeof activateAudio === 'function' && !audioActivated) {
+        activateAudio();
+      }
+
+      updateStatus('Wake word detectado!', 'success');
+      setEmotion('happy');
+
+      if (typeof connectRealtime === 'function' && !isConnected) {
+        setTimeout(() => {
+          connectRealtime();
+          
+          if (typeof playBeep === 'function') {
+            playBeep('activation');
+          }
+        }, 300);
+      }
+
+      scheduleResumeListening();
+    }
+
+    async function startListeningForWakeWord() {
+      if (!isInitialized) {
+        console.warn('⚠️ Inicializando...');
+        const success = await initPorcupine();
+        if (!success) {
+          return false;
+        }
+      }
+
+      if (isListeningForWakeWord) {
+        console.log('⚠️ Ya escuchando');
+        return true;
+      }
+
+      try {
+        await globalThis.WebVoiceProcessor.WebVoiceProcessor.subscribe(porcupineWorker);
+        isListeningForWakeWord = true;
+        
+        console.log('👂 Escuchando wake words...');
+        const keywords = porcupineConfig ? porcupineConfig.keywords.map(k => k.label).join(' o ') : 'wake word';
+        updateStatus(`Di "${keywords}" para activar`, 'info');
+        setEmotion('idle');
+        
+        return true;
+      } catch (error) {
+        console.error('❌ Error:', error);
+        return false;
+      }
+    }
+
+    async function stopListeningForWakeWord() {
+      if (!isListeningForWakeWord) {
+        return;
+      }
+
+      try {
+        await globalThis.WebVoiceProcessor.WebVoiceProcessor.unsubscribe(porcupineWorker);
+        isListeningForWakeWord = false;
+        console.log('🔇 Wake word pausado');
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+
+    function scheduleResumeListening() {
+      if (wakeWordTimeout) {
+        clearTimeout(wakeWordTimeout);
+      }
+
+      const timeout = porcupineConfig ? porcupineConfig.timeoutAfterDetection : 30000;
+      
+      wakeWordTimeout = setTimeout(async () => {
+        if (!isConnected) {
+          console.log('⏰ Volviendo a escuchar...');
+          await startListeningForWakeWord();
+        }
+      }, timeout);
+    }
+
+    async function cleanupPorcupine() {
+      if (wakeWordTimeout) {
+        clearTimeout(wakeWordTimeout);
+      }
+      
+      if (isListeningForWakeWord) {
+        await stopListeningForWakeWord();
+      }
+      
+      if (porcupineWorker) {
+        porcupineWorker.terminate();
+        porcupineWorker = null;
+      }
+      
+      isInitialized = false;
+      console.log('🧹 Porcupine limpiado');
+    }
+
+    // ============================================
+    // FUNCIONES DE BEEP
+    // ============================================
+
+    function playBeep(type = 'activation') {
+      try {
+        const audioContext = dummyAudioContext || new (globalThis.AudioContext || globalThis.webkitAudioContext)();
+        const config = globalThis.AudioMessages?.beeps?.[type];
+        
+        if (!config) {
+          console.warn(`⚠️ Config de beep no encontrada: ${type}`);
+          return;
+        }
+        
+        if (config.frequencies && Array.isArray(config.frequencies)) {
+          let delay = 0;
+          config.frequencies.forEach((freq) => {
+            setTimeout(() => {
+              const oscillator = audioContext.createOscillator();
+              const gainNode = audioContext.createGain();
+              
+              oscillator.frequency.value = freq;
+              oscillator.type = config.type || 'sine';
+              
+              gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + config.duration);
+              
+              oscillator.connect(gainNode);
+              gainNode.connect(audioContext.destination);
+              
+              oscillator.start(audioContext.currentTime);
+              oscillator.stop(audioContext.currentTime + config.duration);
+            }, delay);
+            delay += (config.duration + (config.gap || 0)) * 1000;
+          });
+        } else {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.frequency.value = config.frequency;
+          oscillator.type = config.type || 'sine';
+          
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + config.duration);
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + config.duration);
+        }
+        
+        console.log(`🔊 Beep: ${type}`);
+      } catch (error) {
+        console.error('Error beep:', error);
+      }
+    }
+
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+
+    window.addEventListener('resize', resizeCanvas);
+
+    document.getElementById('activateBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('activateBtn');
+      
+      if (btn.classList.contains('disabled')) {
+        return;
+      }
+      
+      if (!audioActivated) {
+        activateAudio();
+      }
+      
+      if (!isConnected) {
+        btn.classList.add('disabled');
+        await connectRealtime();
+        btn.classList.remove('disabled');
+      } else {
+        cleanup();
+      }
+    });
+
+    document.getElementById('fullscreenBtn').addEventListener('click', () => {
+      const elem = document.documentElement;
+      
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+      }
+    });
+
+    function handleOrientationChange() {
+      if (window.matchMedia("(orientation: landscape)").matches) {
+        if (!document.fullscreenElement && 
+            !document.webkitFullscreenElement && 
+            !document.msFullscreenElement) {
+          const elem = document.documentElement;
+          if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+          }
+        }
+      }
+    }
+
+    window.addEventListener('orientationchange', handleOrientationChange);
+    if (screen.orientation) {
+      screen.orientation.addEventListener('change', handleOrientationChange);
+    }
+
+    document.body.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+    }, { passive: false });
+
+    window.addEventListener('beforeunload', () => {
+      cleanupPorcupine();
+      cleanup();
+    });
+
+    // ============================================
+    // INICIALIZACIÓN
+    // ============================================
+
+    (async () => {
+      // Cargar config del servidor
+      const res = await fetch("/api/config");
+      serverConfig = await res.json();
+      console.log("✅ Config cargada");
+      
+      // Inicializar canvas
+      resizeCanvas();
+      
+      // Iniciar animación
+      animate();
+      
+      // Verificar audio móvil
+      checkMobileAudio();
+      
+      // Verificar orientación
+      if (window.matchMedia("(orientation: landscape)").matches) {
+        setTimeout(() => {
+          const elem = document.documentElement;
+          if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+          }
+        }, 500);
+      }
+      
+      // Inicializar Porcupine
+      console.log('🚀 Iniciando wake word...');
+      
+      if (typeof globalThis.PorcupineWeb === 'undefined') {
+        console.error('❌ Porcupine Web no cargado');
+        updateStatus('Error: Porcupine no disponible', 'error');
+        return;
+      }
+      
+      if (typeof globalThis.WebVoiceProcessor === 'undefined') {
+        console.error('❌ WebVoiceProcessor no cargado');
+        updateStatus('Error: Voice Processor no disponible', 'error');
+        return;
+      }
+      
+      try {
+        await loadPorcupineConfig();
+      } catch (error) {
+        console.error('❌ Error config:', error);
+        updateStatus('Error cargando configuración', 'error');
+        return;
+      }
+      
+      const success = await initPorcupine();
+      
+      if (success) {
+        setTimeout(async () => {
+          await startListeningForWakeWord();
+          console.log('✅ Sistema activo');
+          
+          if (typeof playBeep === 'function') {
+            playBeep('init');
+          }
+        }, 1000);
+      } else {
+        updateStatus('Error: No se pudo inicializar', 'error');
+      }
+    })();
+
+    // Exponer funciones globales
+    window.setEmotion = setEmotion;
+    window.playBeep = playBeep;
+  </script>
+</body>
+</html>
