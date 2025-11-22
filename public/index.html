@@ -106,17 +106,6 @@
   
   <!-- Inicialización automática de Porcupine -->
   <script>
-    // Inicializar voces de TTS
-    if ('speechSynthesis' in window) {
-      // Cargar voces (necesario en algunos navegadores)
-      window.speechSynthesis.onvoiceschanged = () => {
-        const voices = window.speechSynthesis.getVoices();
-        console.log('🗣️ Voces TTS cargadas:', voices.filter(v => v.lang.startsWith('es')).map(v => v.name));
-      };
-      // Trigger inicial
-      window.speechSynthesis.getVoices();
-    }
-    
     // Inicializar Porcupine cuando la página cargue
     window.addEventListener('load', async () => {
       console.log('🚀 Iniciando sistema de wake word...');
@@ -148,9 +137,9 @@
         setTimeout(async () => {
           await startListeningForWakeWord();
           console.log('✅ Sistema de wake word activo');
-          // Mensaje de bienvenida por voz
-          if (typeof speakMessage === 'function') {
-            speakMessage("Sistema iniciado. Di jarvis para activar.", 1.0);
+          // Sonido de inicio del sistema
+          if (typeof playBeep === 'function') {
+            playBeep('init');
           }
         }, 1000);
       }

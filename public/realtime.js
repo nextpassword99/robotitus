@@ -180,9 +180,9 @@ function handleServerEvent(event) {
     case "session.created":
     case "session.updated":
       updateStatus(statusMessages.ready, "success");
-      // Mensaje de voz: Sistema listo
-      if (typeof speakMessage === 'function') {
-        speakMessage("Sistema listo.", 1.2);
+      // Sonido: Sistema listo
+      if (typeof playBeep === 'function') {
+        playBeep('ready');
       }
       // NO iniciar timeout aquí - esperamos a que el usuario hable primero
       break;
@@ -249,9 +249,9 @@ function handleServerEvent(event) {
         `${statusMessages.error}: ${event.error?.message || "Desconocido"}`,
         "error"
       );
-      // Mensaje de voz de error
-      if (typeof speakMessage === 'function') {
-        speakMessage("Error en el sistema.", 1.1);
+      // Sonido de error
+      if (typeof playBeep === 'function') {
+        playBeep('error');
       }
       break;
   }
@@ -270,15 +270,15 @@ function startInactivityTimeout() {
       console.log('⏱️ Timeout de inactividad - cerrando sesión');
       updateStatus('⏱️ No detecté tu voz, volviendo a modo espera...', 'error');
       
-      // Mensaje de voz: No detecté tu voz (sin el "Desactivando")
-      if (typeof speakMessage === 'function') {
-        speakMessage("No detecté tu voz.", 1.1);
+      // Sonido de desactivación
+      if (typeof playBeep === 'function') {
+        playBeep('deactivation');
       }
       
-      // Esperar 2 segundos y luego cleanup directo
+      // Esperar 1 segundo y luego cleanup directo
       setTimeout(() => {
         cleanup();
-      }, 2000);
+      }, 1000);
     }
   }, 10000); // 10 segundos
 }

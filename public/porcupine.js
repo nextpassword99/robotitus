@@ -183,108 +183,77 @@ function showListeningPrompt() {
 }
 
 /**
- * Reproducir sonido y mensaje de voz indicando que el sistema está listo
+ * Reproducir sonido de activación (acorde ascendente)
  */
 function playActivationPrompt() {
+  playBeep('activation');
+}
+
+/**
+ * Reproducir diferentes tipos de beeps según configuración
+ * @param {string} type - Tipo de beep: 'init', 'activation', 'deactivation', 'error', 'ready'
+ */
+function playBeep(type = 'activation') {
   try {
-    // Reproducir tono de activación (beep corto)
     const audioContext = dummyAudioContext || new (globalThis.AudioContext || globalThis.webkitAudioContext)();
+    const config = globalThis.AudioMessages?.beeps?.[type];
     
-    // Tono agradable de activación (440Hz = La)
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    if (!config) {
+      console.warn(`⚠️ Configuración de beep no encontrada para tipo: ${type}`);
+      return;
+    }
     
-    oscillator.frequency.value = 440;
-    oscillator.type = 'sine';
+    // Si tiene múltiples frecuencias (acorde)
+    if (config.frequencies && Array.isArray(config.frequencies)) {
+      let delay = 0;
+      config.frequencies.forEach((freq, index) => {
+        setTimeout(() => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.frequency.value = freq;
+          oscillator.type = config.type || 'sine';
+          
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + config.duration);
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + config.duration);
+        }, delay);
+        delay += (config.duration + (config.gap || 0)) * 1000;
+      });
+    } else {
+      // Beep simple de una sola frecuencia
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.frequency.value = config.frequency;
+      oscillator.type = config.type || 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + config.duration);
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + config.duration);
+    }
     
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.2);
-    
-    console.log('🔔 Sonido de activación reproducido');
-    
-    // Reproducir mensaje de voz: "Configurando... Listo para responder"
-    setTimeout(() => {
-      speakMessage("Configurando. Listo para responder.", 1.1);
-    }, 300);
-    
+    console.log(`🔊 Beep reproducido: ${type}`);
   } catch (error) {
-    console.error('Error reproduciendo sonido de activación:', error);
+    console.error('Error reproduciendo beep:', error);
   }
 }
 
 /**
- * Reproducir mensaje de voz usando Web Speech API
- * @param {string} text - Texto a reproducir
- * @param {number} rate - Velocidad de habla (0.1 - 10, default 1)
- * @param {number} pitch - Tono de voz (0 - 2, default 1)
- */
-function speakMessage(text, rate = 1, pitch = 1) {
-  if (!('speechSynthesis' in globalThis)) {
-    console.warn('⚠️ Web Speech API no disponible');
-    return;
-  }
-  
-  // Cancelar cualquier speech en progreso
-  globalThis.speechSynthesis.cancel();
-  
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'es-ES';
-  utterance.rate = rate;
-  utterance.pitch = pitch;
-  utterance.volume = 1;
-  
-  // Buscar voz en español
-  const voices = globalThis.speechSynthesis.getVoices();
-  const spanishVoice = voices.find(voice => voice.lang.startsWith('es'));
-  if (spanishVoice) {
-    utterance.voice = spanishVoice;
-  }
-  
-  utterance.onstart = () => console.log('🗣️ TTS iniciado:', text);
-  utterance.onend = () => console.log('✅ TTS completado');
-  utterance.onerror = (e) => console.error('❌ Error TTS:', e);
-  
-  globalThis.speechSynthesis.speak(utterance);
-}
-
-/**
- * Reproducir sonido de desactivación y mensaje
- */
-/**
- * Reproducir sonido de desactivación (solo beep, sin mensaje de voz)
+ * Reproducir sonido de desactivación (acorde descendente)
  */
 function playDeactivationSound() {
-  try {
-    const audioContext = dummyAudioContext || new (globalThis.AudioContext || globalThis.webkitAudioContext)();
-    
-    // Tono descendente (desactivación)
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(220, audioContext.currentTime + 0.3);
-    oscillator.type = 'sine';
-    
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.3);
-    
-    console.log('🔕 Sonido de desactivación reproducido');
-    
-  } catch (error) {
-    console.error('Error reproduciendo sonido de desactivación:', error);
-  }
+  playBeep('deactivation');
 }
 
 /**
@@ -489,5 +458,5 @@ globalThis.stopListeningForWakeWord = stopListeningForWakeWord;
 globalThis.getWakeWordStats = getWakeWordStats;
 globalThis.cleanupPorcupine = cleanupPorcupine;
 globalThis.loadPorcupineConfig = loadPorcupineConfig;
-globalThis.speakMessage = speakMessage;
+globalThis.playBeep = playBeep;
 globalThis.playDeactivationSound = playDeactivationSound;

@@ -154,16 +154,6 @@ export const RealtimeConfig = {
     enabled: true,
     keywords: [
       {
-        label: 'leopardo',
-        publicPath: '/keywords/leopardo_wasm.ppn',
-        sensitivity: 0.7
-      },
-      {
-        label: 'manzana',
-        publicPath: '/keywords/manzana_wasm.ppn',
-        sensitivity: 0.7
-      },
-      {
         label: 'jarvis',
         publicPath: '/keywords/jarvis_wasm.ppn',
         sensitivity: 0.7
