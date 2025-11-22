@@ -9,6 +9,7 @@ let audioActivated = false;
 let dummyAudioContext = null;
 let inactivityTimeout = null;
 let hasUserSpoken = false;
+let faceWs = null;
 
 // Cargar config al inicio
 (async () => {
@@ -16,7 +17,43 @@ let hasUserSpoken = false;
   serverConfig = await res.json();
   console.log("✅ Configuración cargada");
   checkMobileAudio();
+  connectFaceControl();
 })();
+
+// Conectar al WebSocket de control facial
+function connectFaceControl() {
+  const protocol = globalThis.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${globalThis.location.host}/face-control`;
+  
+  try {
+    faceWs = new WebSocket(wsUrl);
+    
+    faceWs.onopen = () => {
+      console.log('😊 Conectado a control facial');
+      setFaceEmotion('idle');
+    };
+    
+    faceWs.onerror = (error) => {
+      console.warn('⚠️ Error en WebSocket facial (normal si face.html no está abierto):', error);
+    };
+    
+    faceWs.onclose = () => {
+      console.log('😐 Desconectado de control facial');
+      // Intentar reconectar después de 5 segundos
+      setTimeout(connectFaceControl, 5000);
+    };
+  } catch (error) {
+    console.warn('⚠️ No se pudo conectar al control facial:', error);
+  }
+}
+
+// Enviar emoción al rostro
+function setFaceEmotion(emotion) {
+  if (faceWs && faceWs.readyState === WebSocket.OPEN) {
+    faceWs.send(JSON.stringify({ emotion }));
+    console.log(`😊 Emoción enviada al rostro: ${emotion}`);
+  }
+}
 
 function checkMobileAudio() {
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -184,6 +221,8 @@ function handleServerEvent(event) {
       if (typeof playBeep === 'function') {
         playBeep('ready');
       }
+      // Emoción: Sistema listo
+      setFaceEmotion('happy');
       // NO iniciar timeout aquí - esperamos a que el usuario hable primero
       break;
 
@@ -192,18 +231,23 @@ function handleServerEvent(event) {
       // Usuario empezó a hablar, cancelar timeout
       clearInactivityTimeout();
       hasUserSpoken = true;
+      // Emoción: Escuchando
+      setFaceEmotion('listening');
       break;
 
     case "input_audio_buffer.speech_stopped":
       updateStatus(statusMessages.processing, "processing");
       // No anunciar "Procesando" - dejamos que fluya naturalmente
-
+      // Emoción: Pensando/Procesando
+      setFaceEmotion('thinking');
       console.log("⏱️ Usuario dejó de hablar, iniciando procesamiento...");
       break;
 
     case "output_audio_buffer.stopped":
         // Reprodución de audio terminó
         console.log("✅ Reproducción de audio terminó");
+        // Emoción: Volver a idle después de hablar
+        setFaceEmotion('idle');
         startInactivityTimeout();
         break;
 
@@ -217,10 +261,12 @@ function handleServerEvent(event) {
 
     case "response.audio.delta":
       console.log("🎵 Audio delta recibido");
+      // Emoción: Hablando (solo la primera vez)
+      setFaceEmotion('talking');
       break;
 
     case "response.audio.done":
-      console.log("✅ Audio completo");
+      console.log("✅ NO ESEL AUDIO COMPLETO");
       break;
 
     case "response.audio_transcript.done":
@@ -253,6 +299,8 @@ function handleServerEvent(event) {
       if (typeof playBeep === 'function') {
         playBeep('error');
       }
+      // Emoción: Error
+      setFaceEmotion('error');
       break;
   }
 }
@@ -274,6 +322,9 @@ function startInactivityTimeout() {
       if (typeof playBeep === 'function') {
         playBeep('deactivation');
       }
+      
+      // Emoción: Idle (desactivando)
+      setFaceEmotion('idle');
       
       // Esperar 1 segundo y luego cleanup directo
       setTimeout(() => {
@@ -327,6 +378,9 @@ function cleanup() {
   dc = null;
   isConnected = false;
   hasUserSpoken = false;
+  
+  // Resetear emoción facial
+  setFaceEmotion('idle');
   
   // Volver a modo wake word después de cerrar la sesión
   if (typeof startListeningForWakeWord === 'function') {
